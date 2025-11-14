@@ -2,7 +2,7 @@
     lib/storage.ts — localStorage helpers (versioned)
 */
 
-import { Thread, Message, Preset } from "../types";
+import type { Thread, Message, Preset } from "../types";
 
 const KEY = "promptgpt:v1";
 export interface Store { threads: Thread[]; messages: Message[]; presets: Preset[]; }

@@ -4,6 +4,56 @@
     todo (left sidebar split: threads/presets; main chat)
 */
 
+import { useState } from "react";
+import ThreadList from "./components/ThreadList";
+import PresetList from "./components/PresetList";
+import ChatPane from "./components/ChatPane";
+import './App.css'
+
+export default function App() {
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const [presetAppend, setPresetAppend] = useState<string>("");
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", height: "100vh" }}>
+      <div style={{ borderRight: "1px solid #eee", display: "grid", gridTemplateRows: "1fr 1fr" }}>
+        <ThreadList onSelect={id => setThreadId(id)} />
+        <PresetList onAppend={text => setPresetAppend(text)} />
+      </div>
+      <div>
+        {threadId ? <ChatPane threadId={threadId} presetAppend={presetAppend} /> : <div>Select or create a thread</div>}
+      </div>
+    </div>
+  );
+}
+
+
+/*
+export default function App() {
+  return <h1>Hello, World!</h1>;
+}*/
+
+/*
+import { useState } from "react";
+import ThreadList from "./components/ThreadList";
+
+export default function App() {
+  const [threadId, setThreadId] = useState<string | null>(null);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", height: "100vh" }}>
+      <div style={{ borderRight: "1px solid #eee" }}>
+        <ThreadList onSelect={id => setThreadId(id)} />
+      </div>
+      <div>
+        {threadId ? <div>Thread selected: {threadId}</div> : <div>Select or create a thread</div>}
+      </div>
+    </div>
+  );
+}
+*/
+
+/*
 import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
@@ -39,3 +89,4 @@ function App() {
 }
 
 export default App
+*/

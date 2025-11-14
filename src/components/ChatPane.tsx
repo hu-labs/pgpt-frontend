@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { load, save } from "../lib/storage";
-import { Message } from "../types";
+import type { Message } from "../types";
 
 export default function ChatPane({ threadId, presetAppend }: { threadId: string; presetAppend?: string }) {
   const [store, setStore] = useState(load());
