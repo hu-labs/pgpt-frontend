@@ -1,3 +1,4 @@
+/// <reference types="jest" />
 import { load, save } from "./storage";
 import type { Store } from "./storage";
 
