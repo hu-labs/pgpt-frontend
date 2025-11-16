@@ -29,12 +29,19 @@ export default function ChatPane({ threadId, presetAppend }: { threadId: string;
   }
 
   return (
-    <div>
-      <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
         {messages.map(m => (<div key={m.id}><strong>{m.role}:</strong> {m.content}</div>))}
       </div>
-      <textarea value={input} onChange={e=>setInput(e.target.value)} placeholder="Type a message..." />
-      <button onClick={send}>Send</button>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '8px', borderTop: '1px solid #eee' }}>
+        <textarea
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="Type a message..."
+          style={{ flex: 1, resize: 'none', height: '80px' }}
+        />
+        <button onClick={send} style={{ height: '40px' }}>Send</button>
+      </div>
     </div>
   );
 }

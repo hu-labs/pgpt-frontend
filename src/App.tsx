@@ -16,11 +16,11 @@ export default function App() {
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", height: "100vh" }}>
-      <div style={{ borderRight: "1px solid #eee", display: "grid", gridTemplateRows: "1fr 1fr" }}>
+      <div style={{ borderRight: "1px solid #eee", display: "grid", gridTemplateRows: "1fr 1fr", paddingRight: "16px", overflowY: "auto", backgroundColor: "#f9f9f9" }}>
         <ThreadList onSelect={id => setThreadId(id)} />
         <PresetList onAppend={text => setPresetAppend(text)} />
       </div>
-      <div>
+      <div style={{ height: "100%", width: "100%" }}>
         {threadId ? <ChatPane threadId={threadId} presetAppend={presetAppend} /> : <div>Select or create a thread</div>}
       </div>
     </div>

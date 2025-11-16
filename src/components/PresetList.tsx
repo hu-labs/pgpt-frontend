@@ -27,16 +27,26 @@ export default function PresetList({ onAppend }: { onAppend: (text:string)=>void
 
   return (
     <div>
-      <h4>Presets</h4>
-      <input placeholder="Title" value={title} onChange={e=>setTitle(e.target.value)} />
-      <textarea placeholder="Text" value={text} onChange={e=>setText(e.target.value)} />
-      <button onClick={createPreset}>Add preset</button>
+      <div style={{ textAlign: 'center' }}>
+        <h4 style={{ color: '#aaaaaaff' }}>Prompt Presets</h4>
+        <input placeholder="Title" value={title} onChange={e=>setTitle(e.target.value)} style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }} />
+        <textarea placeholder="Prompt you want to save" value={text} onChange={e=>setText(e.target.value)} style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }} />
+        <div style={{ marginTop: '8px' }}>
+          <button onClick={createPreset} style={{ backgroundColor: '#ffffff' }}>Add preset</button>
+        </div>
+      </div>
       <ul>
         {store.presets.map(p => (
-          <li key={p.id}>
-            <button onClick={() => onAppend(p.text)}>Use</button>
-            <input defaultValue={p.title} onBlur={e=>updatePreset(p.id, { title: e.target.value })} />
-            <button onClick={() => deletePreset(p.id)}>Delete</button>
+          <li key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+            <input
+              defaultValue={p.title}
+              onBlur={e => updatePreset(p.id, { title: e.target.value })}
+              style={{ width: '100%' }}
+            />
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <button onClick={() => onAppend(p.text)}>Use</button>
+              <button onClick={() => deletePreset(p.id)}>Delete</button>
+            </div>
           </li>
         ))}
       </ul>

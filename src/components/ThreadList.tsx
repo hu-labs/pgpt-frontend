@@ -15,8 +15,15 @@ export default function ThreadList({ onSelect }: { onSelect: (id:string)=>void }
     setStore(next); save(next); onSelect(t.id);
   }
   function renameThread(id: string, title: string) {
+    /*
     const next = { ...store, threads: store.threads.map(t => t.id===id ? { ...t, title, updatedAt: Date.now() } : t) };
     setStore(next); save(next);
+    */
+    setStore(prev => {
+        const next = { ...prev, threads: prev.threads.map(t => t.id === id ? { ...t, title, updatedAt: Date.now() } : t) };
+        save(next);
+        return next;
+    });
   }
   function deleteThread(id: string) {
     const nextThreads = store.threads.filter(t => t.id !== id);
@@ -27,14 +34,25 @@ export default function ThreadList({ onSelect }: { onSelect: (id:string)=>void }
 
   return (
     <div>
-      <button onClick={createThread}>New thread</button>
+      <button onClick={createThread} style={{ display: 'block', margin: '16px auto 0', backgroundColor: '#ffffff' }}>New thread</button>
       <ul>
         {store.threads.map(t => (
-          <li key={t.id}>
-            <input defaultValue={t.title} onBlur={e => renameThread(t.id, e.target.value)} />
+        <li key={t.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <input
+            defaultValue={t.title}
+            onBlur={e => renameThread(t.id, (e.target as HTMLInputElement).value)}
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                (e.currentTarget as HTMLInputElement).blur();
+              }
+            }}
+            style={{ width: '100%' }}
+          />
+          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
             <button onClick={() => onSelect(t.id)}>Open</button>
             <button onClick={() => deleteThread(t.id)}>Delete</button>
-          </li>
+          </div>
+        </li>
         ))}
       </ul>
     </div>
