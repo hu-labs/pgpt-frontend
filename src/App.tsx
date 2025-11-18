@@ -18,10 +18,18 @@ export default function App() {
     <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", height: "100vh" }}>
       <div style={{ borderRight: "1px solid #eee", display: "grid", gridTemplateRows: "1fr 1fr", paddingRight: "16px", overflowY: "auto", backgroundColor: "#f9f9f9" }}>
         <ThreadList onSelect={id => setThreadId(id)} />
-        <PresetList onAppend={text => setPresetAppend(text)} />
+        <PresetList onAppend={text => setPresetAppend(prev => prev === text ? `${text} ` : text)} />
       </div>
       <div style={{ height: "100%", width: "100%" }}>
-        {threadId ? <ChatPane threadId={threadId} presetAppend={presetAppend} /> : <div>Select or create a thread</div>}
+        {threadId ?
+          <ChatPane
+            threadId={threadId}
+            presetAppend={presetAppend}
+            onPresetApplied={() => setPresetAppend("")} // Clear presetAppend after 1 use
+          />
+          :
+          <div>Select or create a thread</div>
+        }
       </div>
     </div>
   );
