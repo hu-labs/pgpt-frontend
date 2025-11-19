@@ -23,5 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# Vite
+.env
+
 # My own docs
 /docs/

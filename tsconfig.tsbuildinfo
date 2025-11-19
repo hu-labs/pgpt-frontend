@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/types.ts","./src/components/ChatPane.tsx","./src/components/PresetList.tsx","./src/components/ThreadList.tsx","./src/lib/storage.test.ts","./src/lib/storage.ts"],"version":"5.9.3"}
