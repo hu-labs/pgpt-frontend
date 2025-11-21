@@ -54,13 +54,53 @@ export default function ChatPane({
     save(next);
   }
 
+  /*
   async function send() {
     const input = inputs[threadId] || "";
     if (!input.trim()) return;
 
     addMessage("user", input);
     setInputs(prev => ({ ...prev, [threadId]: "" })); // Clear input for the current threadId
-    addMessage("assistant", "Mock response. Backend coming soon!");
+    addMessage("assistant", "Mock response. Backend not implemented.");
+  }*/
+
+  async function send() {
+    const input = inputs[threadId] || "";
+    if (!input.trim()) return;
+
+    // Add the user message immediately
+    addMessage("user", input);
+
+    // Clear the input box for this thread
+    setInputs(prev => ({ ...prev, [threadId]: "" }));
+
+    // Prepare the threadMessages for the backend
+    const threadMessages = store.messages
+      .filter(m => m.threadId === threadId)
+      .map(m => ({ role: m.role, content: m.content }));
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": import.meta.env.VITE_API_KEY,
+        },
+        body: JSON.stringify({ threadId, messages: threadMessages }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Assuming backend returns { assistant: { content: "..." } }
+      addMessage("assistant", data.assistant?.content || "No response from assistant.");
+    } catch (err: any) {
+      // Show an error message in the chat
+      addMessage("assistant", `⚠️ Error: Could not reach backend. ${err.message}`);
+    }
   }
 
   return (
