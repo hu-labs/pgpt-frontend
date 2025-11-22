@@ -23,10 +23,7 @@ export default function ChatPane({
   const messages = store.messages.filter(m => m.threadId === threadId);
 
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log("threadId changed");
-    }
-    // Logic for when threadId changes
+    //if (import.meta.env.DEV) console.log("threadId changed");
     if (!inputs[threadId]) {
       setInputs(prev => ({
         ...prev,
@@ -49,9 +46,12 @@ export default function ChatPane({
 
   function addMessage(role: "user"|"assistant", content: string) {
     const m: Message = { id: crypto.randomUUID(), threadId, role, content, createdAt: Date.now() };
-    const next = { ...store, messages: [...store.messages, m] };
-    setStore(next);
-    save(next);
+    setStore(prev=> {
+      const next = { ...prev, messages: [...prev.messages, m] };
+      save(next);
+      return next;
+    });
+    //console.log("After save: ", store.messages.some(m => m.content === "Hello World"));
   }
 
   /*
@@ -93,10 +93,24 @@ export default function ChatPane({
         throw new Error(`Backend error: ${response.status} ${response.statusText}`);
       }
 
+      // Processing AI response
       const data = await response.json();
+      console.log("Backend response data:", data);
 
-      // Assuming backend returns { assistant: { content: "..." } }
-      addMessage("assistant", data.assistant?.content || "No response from assistant.");
+      // Parse the body if it's a string
+      const parsedBody = typeof data.body === "string" ? JSON.parse(data.body) : data.body;
+      console.log("Assistant message content:", parsedBody.assistant?.content);
+            
+      // Breaking down the logic for debug. Maybe optimize in the future.
+      /*
+      const assistantContent = parsedBody.assistant?.content;
+      if (!assistantContent) {
+        console.error("Assistant content is undefined or null.");
+        addMessage("assistant", "No response from assistant.");
+      } else {
+        addMessage("assistant", assistantContent);
+      }*/
+      addMessage("assistant", parsedBody.assistant?.content || "No response from assistant.");
     } catch (err: any) {
       // Show an error message in the chat
       addMessage("assistant", `⚠️ Error: Could not reach backend. ${err.message}`);
