@@ -55,31 +55,49 @@ export default function ChatPane({
   }
 
   /*
-  async function send() {
-    const input = inputs[threadId] || "";
-    if (!input.trim()) return;
-
-    addMessage("user", input);
-    setInputs(prev => ({ ...prev, [threadId]: "" })); // Clear input for the current threadId
-    addMessage("assistant", "Mock response. Backend not implemented.");
-  }*/
+    solution for the fetch closure in async send()
+  const storeRef = useRef(store);
+  useEffect(() => {
+    storeRef.current = store;
+  }, [store]);
+  */
 
   async function send() {
     const input = inputs[threadId] || "";
     if (!input.trim()) return;
 
-    // Add the user message immediately
-    addMessage("user", input);
+    // Step 1: Add the user message to the store
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      threadId,
+      role: "user",
+      content: input,
+      createdAt: Date.now(),
+    };
+
+    let threadMessages: { role: string; content: string }[] = [];
+
+    // Use a functional update to ensure the latest state is used
+    await new Promise<void>(resolve => {
+      setStore(prev => {
+        const next = { ...prev, messages: [...prev.messages, userMessage] };
+        save(next);
+
+        // Step 2: Calculate threadMessages using the updated state
+        threadMessages = next.messages
+          .filter(m => m.threadId === threadId)
+          .map(m => ({ role: m.role, content: m.content }));
+
+        resolve(); // Ensure this step completes before proceeding
+        return next;
+      });
+    });
 
     // Clear the input box for this thread
     setInputs(prev => ({ ...prev, [threadId]: "" }));
 
-    // Prepare the threadMessages for the backend
-    const threadMessages = store.messages
-      .filter(m => m.threadId === threadId)
-      .map(m => ({ role: m.role, content: m.content }));
-
     try {
+      // Step 3: Send the threadMessages to the backend
       const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
         method: "POST",
         headers: {
@@ -93,24 +111,20 @@ export default function ChatPane({
         throw new Error(`Backend error: ${response.status} ${response.statusText}`);
       }
 
-      // Processing AI response
       const data = await response.json();
       console.log("Backend response data:", data);
 
-      // Parse the body if it's a string
-      const parsedBody = typeof data.body === "string" ? JSON.parse(data.body) : data.body;
-      console.log("Assistant message content:", parsedBody.assistant?.content);
-            
-      // Breaking down the logic for debug. Maybe optimize in the future.
-      /*
+      // Step 4: Add the AI response to the store
+      const parsedBody = typeof data.body === "string"
+                        ? JSON.parse(data.body) : data.body;
       const assistantContent = parsedBody.assistant?.content;
+
       if (!assistantContent) {
-        console.error("Assistant content is undefined or null.");
+        console.error("Assistant content is undefined or null. Falling back to failsafe.");
         addMessage("assistant", "No response from assistant.");
       } else {
         addMessage("assistant", assistantContent);
-      }*/
-      addMessage("assistant", parsedBody.assistant?.content || "No response from assistant.");
+      }
     } catch (err: any) {
       // Show an error message in the chat
       addMessage("assistant", `⚠️ Error: Could not reach backend. ${err.message}`);
@@ -133,7 +147,6 @@ export default function ChatPane({
           placeholder="Type a message..."
           style={{ flex: 1, resize: 'none', height: '80px' }}
         />
-        {/*<button onClick={send} style={{ height: '40px' }}>Send</button>*/}
         <button
           onClick={send}
           //disabled={input.trim().length === 0}

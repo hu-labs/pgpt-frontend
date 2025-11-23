@@ -1,5 +1,15 @@
+/* Ensure the right pane has an independent vertical scrollbar */
+.right-pane {
+  overflow-y: auto; /* Enable vertical scrolling */
+  height: 100%; /* Ensure it doesn't affect the entire window */
+}
 
-
+/* Ensure the parent container doesn't interfere */
+.parent-container {
+  display: flex;
+  height: 100vh; /* Full viewport height */
+  overflow: hidden; /* Prevent parent from scrolling */
+}
 /*
 #root {
   max-width: 1280px;
