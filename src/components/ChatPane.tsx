@@ -83,7 +83,7 @@ export default function ChatPane({
         const next = { ...prev, messages: [...prev.messages, userMessage] };
         save(next);
 
-        // Step 2: Calculate threadMessages using the updated state
+        // Save the newest message array in threadMessages for the later fetch()
         threadMessages = next.messages
           .filter(m => m.threadId === threadId)
           .map(m => ({ role: m.role, content: m.content }));
@@ -97,7 +97,7 @@ export default function ChatPane({
     setInputs(prev => ({ ...prev, [threadId]: "" }));
 
     try {
-      // Step 3: Send the threadMessages to the backend
+      // fetch() from the backend
       const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
         method: "POST",
         headers: {
@@ -113,21 +113,29 @@ export default function ChatPane({
 
       const data = await response.json();
       console.log("Backend response data:", data);
+      if( data.errorType==="Sandbox.Timeout" )
+        addMessage("assistant", `⚠️ Error: Timed out.`);
+    } catch (err: any) {
+      console.error("Error during backend fetch:", err);
+      addMessage("assistant", `⚠️ Error: Could not reach backend. ${err.message}`);
+      return; // Exit early if the fetch fails
+    }
 
-      // Step 4: Add the AI response to the store
+    try {
+      // Process the backend response
       const parsedBody = typeof data.body === "string"
                         ? JSON.parse(data.body) : data.body;
       const assistantContent = parsedBody.assistant?.content;
 
       if (!assistantContent) {
-        console.error("Assistant content is undefined or null. Falling back to failsafe.");
-        addMessage("assistant", "No response from assistant.");
+        console.error("Assistant content is undefined or null.");
+        addMessage("assistant", `⚠️ Parse Error: Assistant content is undefined or null.`);
       } else {
         addMessage("assistant", assistantContent);
       }
     } catch (err: any) {
       // Show an error message in the chat
-      addMessage("assistant", `⚠️ Error: Could not reach backend. ${err.message}`);
+      addMessage("assistant", `⚠️ Error: Failed to process backend response. ${err.message}`);
     }
   }
 

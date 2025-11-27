@@ -50,6 +50,10 @@ export default function PresetList({ onAppend }: { onAppend: (text:string)=>void
           </li>
         ))}
       </ul>
+      {/* Add custom text at the bottom-left */}
+      <div style={{ textAlign: 'left', fontSize: '12px', color: '#888', margin: '8px', position: 'absolute', bottom: '0', left: '0' }}>
+        v1.0
+      </div>
     </div>
   );
 }
