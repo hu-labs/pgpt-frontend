@@ -9,11 +9,13 @@ import type { Message } from "../types";
 export default function ChatPane({
   threadId,
   presetAppend,
-  onPresetApplied
+  onPresetApplied,
+  onFocus, // Add the onFocus prop
 }: {
   threadId: string;
   presetAppend?: string;
-  onPresetApplied: () => void
+  onPresetApplied: () => void,
+  onFocus?: () => void; // onFocus is optional
 })
 {
   const [store, setStore] = useState(load());
@@ -53,14 +55,6 @@ export default function ChatPane({
     });
     //console.log("After save: ", store.messages.some(m => m.content === "Hello World"));
   }
-
-  /*
-    solution for the fetch closure in async send()
-  const storeRef = useRef(store);
-  useEffect(() => {
-    storeRef.current = store;
-  }, [store]);
-  */
 
   async function send() {
     const input = inputs[threadId] || "";
@@ -142,8 +136,11 @@ export default function ChatPane({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+      onFocus={onFocus} // Attach the onFocus handler to the main container
+      tabIndex={-1} // Ensure the div can receive focus
+    >
+      <div style={{ flex: 1, overflowY: 'auto', paddingTop: '12px', paddingRight: '36px', paddingBottom: '12px', paddingLeft: '36px' }}>
         {messages.map(m => (
           <div key={m.id}>
             <strong>{m.role}:</strong> {m.content}
