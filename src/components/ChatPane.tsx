@@ -77,7 +77,7 @@ export default function ChatPane({
 
     let threadMessages: { role: string; content: string }[] = [];
 
-    // Use a functional update to ensure the latest state is used
+    // Need the user input to go into the stored messages before fetch()
     await new Promise<void>(resolve => {
       setStore(prev => {
         const next = { ...prev, messages: [...prev.messages, userMessage] };
@@ -95,7 +95,9 @@ export default function ChatPane({
 
     // Clear the input box for this thread
     setInputs(prev => ({ ...prev, [threadId]: "" }));
+    // Consider locking the send button here?
 
+    let data: any;
     try {
       // fetch() from the backend
       const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
@@ -111,7 +113,7 @@ export default function ChatPane({
         throw new Error(`Backend error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      data = await response.json();
       console.log("Backend response data:", data);
       if( data.errorType==="Sandbox.Timeout" )
         addMessage("assistant", `⚠️ Error: Timed out.`);
@@ -157,7 +159,6 @@ export default function ChatPane({
         />
         <button
           onClick={send}
-          //disabled={input.trim().length === 0}
           disabled={(inputs[threadId]?.trim().length || 0) === 0}
           style={{ height: '40px' }}
         >

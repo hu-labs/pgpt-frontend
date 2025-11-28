@@ -16,11 +16,11 @@ export default function App() {
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", height: "100vh", overflow: "hidden" }}> {/* prevent whole window scr */}
-      <div style={{ borderRight: "1px solid #eee", display: "grid", gridTemplateRows: "1fr 1fr", paddingRight: "16px", overflowY: "auto", backgroundColor: "#f9f9f9" }}> {/* Left pane */}
+      <div className="left-pane" style={{ borderRight: "1px solid #eee", display: "grid", gridTemplateRows: "1fr 1fr", paddingRight: "16px", overflowY: "auto" }}> {/* Left pane */}
         <ThreadList onSelect={id => setThreadId(id)} />
         <PresetList onAppend={text => setPresetAppend(prev => prev === text ? `${text} ` : text)} />
       </div>
-      <div style={{ height: "100%", width: "100%", overflowY: "auto" }}> {/* Right pane with independent scrolling */}
+      <div style={{ height: "100%", width: "100%", overflowY: "auto", display: "flex", justifyContent: "center", alignItems: "center" }}> {/* Right pane with independent scrolling */}
         {threadId ?
           <ChatPane
             threadId={threadId}

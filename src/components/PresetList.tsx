@@ -32,7 +32,7 @@ export default function PresetList({ onAppend }: { onAppend: (text:string)=>void
         <input placeholder="Title" value={title} onChange={e=>setTitle(e.target.value)} style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }} />
         <textarea placeholder="Prompt you want to save" value={text} onChange={e=>setText(e.target.value)} style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }} />
         <div style={{ marginTop: '8px' }}>
-          <button onClick={createPreset} style={{ backgroundColor: '#ffffff' }}>Add preset</button>
+          <button onClick={createPreset}  className="major-button" style={{ display: 'block', margin: '16px auto 0' }}>Add preset</button>
         </div>
       </div>
       <ul>
@@ -43,9 +43,9 @@ export default function PresetList({ onAppend }: { onAppend: (text:string)=>void
               onBlur={e => updatePreset(p.id, { title: e.target.value })}
               style={{ width: '100%' }}
             />
-            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button onClick={() => onAppend(p.text)}>Use</button>
-              <button onClick={() => deletePreset(p.id)}>Delete</button>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px', marginBottom: '4px' }}>
+              <button onClick={() => onAppend(p.text)} className="minor-button">Use</button>
+              <button onClick={() => deletePreset(p.id)} className="minor-button">Delete</button>
             </div>
           </li>
         ))}

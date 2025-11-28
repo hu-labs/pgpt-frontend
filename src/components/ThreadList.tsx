@@ -34,7 +34,9 @@ export default function ThreadList({ onSelect }: { onSelect: (id:string)=>void }
 
   return (
     <div>
-      <button onClick={createThread} style={{ display: 'block', margin: '16px auto 0', backgroundColor: '#ffffff' }}>New thread</button>
+      <button onClick={createThread} className="major-button" style={{ display: 'block', margin: '16px auto 0' }}>
+        New thread
+      </button>
       <ul>
         {store.threads.map(t => (
         <li key={t.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
@@ -48,9 +50,9 @@ export default function ThreadList({ onSelect }: { onSelect: (id:string)=>void }
             }}
             style={{ width: '100%' }}
           />
-          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-            <button onClick={() => onSelect(t.id)}>Open</button>
-            <button onClick={() => deleteThread(t.id)}>Delete</button>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '4px', marginBottom: '4px' }}>
+            <button onClick={() => onSelect(t.id)} className="minor-button">Open</button>
+            <button onClick={() => deleteThread(t.id)} className="minor-button">Delete</button>
           </div>
         </li>
         ))}
