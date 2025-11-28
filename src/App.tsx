@@ -20,7 +20,7 @@ export default function App() {
         <ThreadList onSelect={id => setThreadId(id)} />
         <PresetList onAppend={text => setPresetAppend(prev => prev === text ? `${text} ` : text)} />
       </div>
-      <div style={{ height: "100%", width: "100%", overflowY: "auto", display: "flex", justifyContent: "center", alignItems: "center" }}> {/* Right pane with independent scrolling */}
+      <div style={{ height: "100%", width: "100%", overflowY: "auto", display: "flex", flexDirection: "column" }}> {/* Right pane with independent scrolling */}
         {threadId ?
           <ChatPane
             threadId={threadId}
@@ -28,7 +28,9 @@ export default function App() {
             onPresetApplied={() => setPresetAppend("")} // Clear presetAppend after 1 use
           />
           :
-          <div>Select or create a thread</div>
+          <div style={{ display: "flex", justifyContent: "center",
+                        alignItems: "center", height: "100%", width: "100%",
+          }}>Select or create a thread</div>
         }
       </div>
     </div>
