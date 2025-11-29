@@ -140,14 +140,17 @@ export default function ChatPane({
       onFocus={onFocus} // Attach the onFocus handler to the main container
       tabIndex={-1} // Ensure the div can receive focus
     >
-      <div style={{ flex: 1, overflowY: 'auto', paddingTop: '12px', paddingRight: '36px', paddingBottom: '12px', paddingLeft: '36px' }}>
+      <div style={{ flex: 1, overflowY: 'auto',
+                    paddingTop: '8px', paddingRight: '20px', paddingBottom: '8px', paddingLeft: '30px' }}>
         {messages.map(m => (
           <div key={m.id}>
             <strong>{m.role}:</strong> {m.content}
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', padding: '8px', borderTop: '1px solid #eee' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', borderTop: '1px solid #eee',
+                    paddingTop: '8px', paddingRight: '18px', paddingBottom: '8px', paddingLeft: '18px'
+      }}>
         <textarea
           value={inputs[threadId] || ""}
           onChange={e => setInputs(prev => ({ ...prev, [threadId]: e.target.value }))}
@@ -157,7 +160,7 @@ export default function ChatPane({
         <button
           onClick={send}
           disabled={(inputs[threadId]?.trim().length || 0) === 0}
-          style={{ height: '40px' }}
+          style={{ alignSelf: "flex-start", padding: "10px 20px" }}
         >
           Send
         </button>

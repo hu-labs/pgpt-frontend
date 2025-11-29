@@ -34,10 +34,10 @@ export default function ThreadList({ onSelect }: { onSelect: (id:string)=>void }
 
   return (
     <div>
-      <button onClick={createThread} className="major-button" style={{ display: 'block', margin: '16px auto 0' }}>
+      <button onClick={createThread} className="major-button" style={{ display: 'block', margin: '2px auto 14px' }}>
         New thread
       </button>
-      <ul>
+      <ul className="thread-list">
         {store.threads.map(t => (
         <li key={t.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
           <input

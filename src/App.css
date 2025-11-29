@@ -8,11 +8,18 @@ button {
   transition: background-color 0.3s, color 0.3s;
 }
 
+.left-pane ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+
 /* Major button styles */
 .major-button {
   background-color: var(--major-button-bg, #f0f0f0); /* Default to blue */
   color: var(--major-button-color, #333);
-  padding: 12px 20px;
+  padding: 10px 18px;
   font-weight: bold;
 }
 
@@ -26,7 +33,8 @@ button {
 .minor-button {
   background-color: var(--minor-button-bg, #f0f0f0); /* Default to light gray */
   color: var(--minor-button-color, #333);
-  padding: 8px 12px;
+  padding: 4px 12px;
+  font-size: 12px;
 }
 
 .minor-button:hover {
@@ -39,6 +47,61 @@ button {
 .left-pane {
   background-color: #f9f9f9; /* Slightly darker than white for light theme */
 }
+
+.hamburger-bar,
+.hamburger-bar::before,
+.hamburger-bar::after {
+  content: '';
+  display: block;
+  width: 24px; /* Same as button width */
+  height: 3px; /* Thickness of the bars */
+  background-color: #f7f7f7; /* Color of the bars */
+  position: absolute;
+}
+
+/* Position the pseudo-elements relative to the main bar */
+.hamburger-bar::before {
+  top: -8px; /* Distance above the middle bar */
+}
+
+.hamburger-bar::after {
+  bottom: -8px; /* Distance below the middle bar */
+}
+
+.hamburger-button {
+  /* Make the button look like an icon container */
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 24px; /* Menu button size */
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 50px; /* Adjust size as needed */
+  font-weight: bold;
+  color: #333; /* Adjust color as needed */
+  padding: 0;
+  line-height: 1; /* Helps with vertical centering */
+  height: 24px;
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  color: #ff0000; /* Optional hover effect */
+}
+
 
 /* Dark mode styles */
 @media (prefers-color-scheme: dark) {
@@ -63,4 +126,9 @@ button {
   .left-pane {
     background-color: #333; /* Slightly lighter than black for dark theme */
   }
+
+  .close-button {
+    color: #ececec; /* Adjust color as needed */
+  }
 }
+

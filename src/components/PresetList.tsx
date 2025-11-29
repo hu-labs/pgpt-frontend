@@ -32,7 +32,10 @@ export default function PresetList({ onAppend }: { onAppend: (text:string)=>void
         <input placeholder="Title" value={title} onChange={e=>setTitle(e.target.value)} style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }} />
         <textarea placeholder="Prompt you want to save" value={text} onChange={e=>setText(e.target.value)} style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }} />
         <div style={{ marginTop: '8px' }}>
-          <button onClick={createPreset}  className="major-button" style={{ display: 'block', margin: '16px auto 0' }}>Add preset</button>
+          <button onClick={createPreset}  className="major-button"
+                  style={{ display: 'block', margin: '2px auto 14px' }}>
+            Add preset
+          </button>
         </div>
       </div>
       <ul>
@@ -50,10 +53,7 @@ export default function PresetList({ onAppend }: { onAppend: (text:string)=>void
           </li>
         ))}
       </ul>
-      {/* Add custom text at the bottom-left */}
-      <div style={{ textAlign: 'left', fontSize: '12px', color: '#888', margin: '8px', position: 'absolute', bottom: '0', left: '0' }}>
-        v1.0
-      </div>
+
     </div>
   );
 }
