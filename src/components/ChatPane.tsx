@@ -141,7 +141,9 @@ export default function ChatPane({
       tabIndex={-1} // Ensure the div can receive focus
     >
       <div style={{ flex: 1, overflowY: 'auto',
-                    paddingTop: '8px', paddingRight: '20px', paddingBottom: '8px', paddingLeft: '30px' }}>
+                    paddingTop: '8px', paddingRight: '20px', paddingBottom: '8px', paddingLeft: '30px' }}
+                    tabIndex={-1}
+      >
         {messages.map(m => (
           <div key={m.id}>
             <strong>{m.role}:</strong> {m.content}

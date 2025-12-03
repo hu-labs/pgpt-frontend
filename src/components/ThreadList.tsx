@@ -6,7 +6,7 @@ import { useState } from "react";
 import { load, save } from "../lib/storage";
 import type { Thread } from "../types";
 
-export default function ThreadList({ onSelect }: { onSelect: (id:string)=>void }) {
+export default function ThreadList({ onSelect, isMenuOpen }: { onSelect: (id:string)=>void, isMenuOpen: boolean }) {
   const [store, setStore] = useState(load());
 
   function createThread() {
@@ -34,7 +34,10 @@ export default function ThreadList({ onSelect }: { onSelect: (id:string)=>void }
 
   return (
     <div>
-      <button onClick={createThread} className="major-button" style={{ display: 'block', margin: '2px auto 14px' }}>
+      <button onClick={createThread} className="major-button"
+              style={{ display: 'block', margin: '2px auto 14px' }}
+              tabIndex={isMenuOpen ? 0 : -1}
+      >
         New thread
       </button>
       <ul className="thread-list">
@@ -49,10 +52,17 @@ export default function ThreadList({ onSelect }: { onSelect: (id:string)=>void }
               }
             }}
             style={{ width: '100%' }}
+            tabIndex={isMenuOpen ? 0 : -1}
           />
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px', marginBottom: '4px' }}>
-            <button onClick={() => onSelect(t.id)} className="minor-button">Open</button>
-            <button onClick={() => deleteThread(t.id)} className="minor-button">Delete</button>
+            <button onClick={() => onSelect(t.id)} className="minor-button"
+              tabIndex={isMenuOpen ? 0 : -1} >
+              Open
+            </button>
+            <button onClick={() => deleteThread(t.id)} className="minor-button"
+              tabIndex={isMenuOpen ? 0 : -1} >
+              Delete
+            </button>
           </div>
         </li>
         ))}

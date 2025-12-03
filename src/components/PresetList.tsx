@@ -6,7 +6,7 @@ import { useState } from "react";
 import { load, save } from "../lib/storage";
 import type { Preset } from "../types";
 
-export default function PresetList({ onAppend }: { onAppend: (text:string)=>void }) {
+export default function PresetList({ onAppend, isMenuOpen }: { onAppend: (text:string)=>void, isMenuOpen: boolean }) {
   const [store, setStore] = useState(load());
   const [title, setTitle] = useState(""); const [text, setText] = useState("");
 
@@ -29,11 +29,21 @@ export default function PresetList({ onAppend }: { onAppend: (text:string)=>void
     <div>
       <div style={{ textAlign: 'center' }}>
         <h4 style={{ color: '#aaaaaaff' }}>Prompt Presets</h4>
-        <input placeholder="Title" value={title} onChange={e=>setTitle(e.target.value)} style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }} />
-        <textarea placeholder="Prompt you want to save" value={text} onChange={e=>setText(e.target.value)} style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }} />
+        <input placeholder="Title" value={title}
+                onChange={e=>setTitle(e.target.value)}
+                style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }}
+                tabIndex={isMenuOpen ? 0 : -1}
+        />
+        <textarea placeholder="Prompt you want to save" value={text}
+                  onChange={e=>setText(e.target.value)}
+                  style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }}
+                  tabIndex={isMenuOpen ? 0 : -1}
+        />
         <div style={{ marginTop: '8px' }}>
           <button onClick={createPreset}  className="major-button"
-                  style={{ display: 'block', margin: '2px auto 14px' }}>
+                  style={{ display: 'block', margin: '2px auto 14px' }}
+                  tabIndex={isMenuOpen ? 0 : -1}
+          >
             Add preset
           </button>
         </div>
@@ -45,10 +55,19 @@ export default function PresetList({ onAppend }: { onAppend: (text:string)=>void
               defaultValue={p.title}
               onBlur={e => updatePreset(p.id, { title: e.target.value })}
               style={{ width: '100%' }}
+              tabIndex={isMenuOpen ? 0 : -1}
             />
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px', marginBottom: '4px' }}>
-              <button onClick={() => onAppend(p.text)} className="minor-button">Use</button>
-              <button onClick={() => deletePreset(p.id)} className="minor-button">Delete</button>
+              <button onClick={() => onAppend(p.text)} className="minor-button"
+                      tabIndex={isMenuOpen ? 0 : -1}
+              >
+                Use
+              </button>
+              <button onClick={() => deletePreset(p.id)} className="minor-button"
+                      tabIndex={isMenuOpen ? 0 : -1}
+              >
+                Delete
+              </button>
             </div>
           </li>
         ))}
