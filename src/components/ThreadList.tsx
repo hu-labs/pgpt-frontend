@@ -2,23 +2,25 @@
         Thread CRUD
 */
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { load, save } from "../lib/storage";
 import type { Thread } from "../types";
 
 export default function ThreadList({ onSelect, isMenuOpen }: { onSelect: (id:string)=>void, isMenuOpen: boolean }) {
   const [store, setStore] = useState(load());
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   function createThread() {
     const t: Thread = { id: crypto.randomUUID(), title: "New chat", createdAt: Date.now(), updatedAt: Date.now() };
     const next = { ...store, threads: [t, ...store.threads] };
     setStore(next); save(next); onSelect(t.id);
+
+    // Focus the input field for the new thread
+    setTimeout(() => {
+      inputRefs.current[t.id]?.focus();
+    }, 0);
   }
   function renameThread(id: string, title: string) {
-    /*
-    const next = { ...store, threads: store.threads.map(t => t.id===id ? { ...t, title, updatedAt: Date.now() } : t) };
-    setStore(next); save(next);
-    */
     setStore(prev => {
         const next = { ...prev, threads: prev.threads.map(t => t.id === id ? { ...t, title, updatedAt: Date.now() } : t) };
         save(next);
@@ -50,6 +52,9 @@ export default function ThreadList({ onSelect, isMenuOpen }: { onSelect: (id:str
               if (e.key === "Enter") {
                 (e.currentTarget as HTMLInputElement).blur();
               }
+            }}
+            ref={(el) => {
+              inputRefs.current[t.id] = el;
             }}
             tabIndex={isMenuOpen ? 0 : -1}
           />
