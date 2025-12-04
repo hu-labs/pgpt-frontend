@@ -153,13 +153,13 @@ export default function ChatPane({
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', borderTop: '1px solid #eee',
                     paddingTop: '8px', paddingRight: '18px', paddingBottom: '8px', paddingLeft: '18px'
       }}>
-        <textarea
+        <textarea className="chatTextArea"
           value={inputs[threadId] || ""}
           onChange={e => setInputs(prev => ({ ...prev, [threadId]: e.target.value }))}
           placeholder="Type a message..."
           style={{ flex: 1, resize: 'none', height: '80px' }}
         />
-        <button
+        <button className="major-button"
           onClick={send}
           disabled={(inputs[threadId]?.trim().length || 0) === 0}
           style={{ alignSelf: "flex-start", padding: "10px 20px" }}

@@ -1,3 +1,27 @@
+:root {
+  --major-button-bg: #002752;
+  --major-button-hover-bg: #ffffff;
+  --major-button-color: #ffffff;
+}
+
+.app-title {
+  flex-grow: 1;
+  text-align: center;
+  font-size: 1.0rem;
+  font-weight: bold;
+  color: #f8f8f8ff;
+}
+
+.app-title-bar {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: var(--major-button-bg, #888);
+  border-bottom: 1px solid #eee;
+}
+
 /* General button styles */
 button {
   border: 1px solid #ccc;
@@ -8,44 +32,87 @@ button {
   transition: background-color 0.3s, color 0.3s;
 }
 
-.left-pane ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-
 /* Major button styles */
 .major-button {
-  background-color: var(--major-button-bg, #f0f0f0); /* Default to blue */
+  background-color: var(--major-button-bg, #f0f0f0);
   color: var(--major-button-color, #333);
-  padding: 10px 18px;
+  font-size: 0.9rem;
   font-weight: bold;
+
+  padding: 7px 18px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
 }
 
 .major-button:hover {
-  background-color: var(--major-button-hover-bg, #e0e0e0);
-  outline: 1px solid #c4c4c4;
+  background-color: var(--major-button-hover-bg, #ffffff);
+  color: var(--major-button-bg, #333);
+  outline: 1px solid var(--major-button-bg, #333);
+  outline-offset: 0px;
+}
+
+.major-button:focus {
+  background-color: var(--major-button-hover-bg, #ffffff);
+  color: var(--major-button-bg, #333);
+  outline: 1px solid var(--major-button-bg, #333);
   outline-offset: 0px;
 }
 
 /* Minor button styles */
 .minor-button {
-  background-color: var(--minor-button-bg, #f0f0f0); /* Default to light gray */
-  color: var(--minor-button-color, #333);
-  padding: 4px 12px;
-  font-size: 12px;
+  background-color: rgba(0,0,0,0); /* transparent */
+  color:  #333;
+  font-size: 0.7rem;
+  font-weight: bold;
+
+  padding: 0px 4px;
+  margin-bottom: 5px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
 }
 
 .minor-button:hover {
-  background-color: var(--minor-button-hover-bg, #e0e0e0);
-  outline: 1px solid #c4c4c4;
+  background-color: rgba(0,0,0,0);
+  color:  #ff1b1b;
+  outline: 1px solid #dddddd;
   outline-offset: 0px;
+}
+
+.minor-button:focus {
+  background-color: rgba(0,0,0,0);
+  color:  #ff1b1b;
+  outline: 1px solid #ffd4d4;
+}
+
+.threadInput {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 4px 2px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.chatTextArea {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 8px;
+  font-size: 14px;
+  font-family: inherit;
 }
 
 /* Add theming for the left pane */
 .left-pane {
   background-color: #f9f9f9; /* Slightly darker than white for light theme */
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .hamburger-bar,
@@ -106,21 +173,35 @@ button {
 /* Dark mode styles */
 @media (prefers-color-scheme: dark) {
   .major-button {
-    background-color: #444;
-    color: #fff;
+    background-color: #ffffff;
+    color: #000000;
   }
 
   .major-button:hover {
-    background-color: #555;
+    background-color: #414141;
+    color: white;
+    outline: white 2px solid;
+  }
+
+  .major-button:focus {
+    background-color: #414141;
+    color: white;
+    outline: white 2px solid;
   }
 
   .minor-button {
-    background-color: #444;
+    background-color: rgba(0,0,0,0);
     color: #fff;
   }
 
   .minor-button:hover {
-    background-color: #555;
+    background-color: rgba(0,0,0,0);
+    outline: 1px solid #5a5a5a;
+  }
+
+  .minor-button:focus {
+    background-color: rgba(0,0,0,0);
+    outline: 1px solid #4e4e4e;
   }
 
   .left-pane {

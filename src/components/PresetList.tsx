@@ -29,14 +29,14 @@ export default function PresetList({ onAppend, isMenuOpen }: { onAppend: (text:s
     <div>
       <div style={{ textAlign: 'center' }}>
         <h4 style={{ color: '#aaaaaaff' }}>Prompt Presets</h4>
-        <input placeholder="Title" value={title}
+        <input className="threadInput" placeholder="Prompt title" value={title}
                 onChange={e=>setTitle(e.target.value)}
                 style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }}
                 tabIndex={isMenuOpen ? 0 : -1}
         />
-        <textarea placeholder="Prompt you want to save" value={text}
+        <textarea className="threadInput" placeholder="Prompt you want to save" value={text}
                   onChange={e=>setText(e.target.value)}
-                  style={{ display: 'block', margin: '0 auto', marginBottom: '8px' }}
+                  style={{ display: 'block', margin: '0 auto', marginBottom: '8px', resize: 'vertical' }}
                   tabIndex={isMenuOpen ? 0 : -1}
         />
         <div style={{ marginTop: '8px' }}>
@@ -51,7 +51,7 @@ export default function PresetList({ onAppend, isMenuOpen }: { onAppend: (text:s
       <ul>
         {store.presets.map(p => (
           <li key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <input
+            <input className="threadInput"
               defaultValue={p.title}
               onBlur={e => updatePreset(p.id, { title: e.target.value })}
               style={{ width: '100%' }}

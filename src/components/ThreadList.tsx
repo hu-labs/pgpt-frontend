@@ -43,7 +43,7 @@ export default function ThreadList({ onSelect, isMenuOpen }: { onSelect: (id:str
       <ul className="thread-list">
         {store.threads.map(t => (
         <li key={t.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-          <input
+          <input className="threadInput"
             defaultValue={t.title}
             onBlur={e => renameThread(t.id, (e.target as HTMLInputElement).value)}
             onKeyDown={e => {
@@ -51,7 +51,6 @@ export default function ThreadList({ onSelect, isMenuOpen }: { onSelect: (id:str
                 (e.currentTarget as HTMLInputElement).blur();
               }
             }}
-            style={{ width: '100%' }}
             tabIndex={isMenuOpen ? 0 : -1}
           />
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px', marginBottom: '4px' }}>

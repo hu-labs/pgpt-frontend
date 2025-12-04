@@ -16,10 +16,8 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false); // State to toggle the left pane
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
 
-  useEffect(() => { // Check this later if it's sensible on mobile browsers
-    const updateHeight = () => {
-      setViewportHeight(window.innerHeight); // Dynamically update the height
-    };
+  useEffect(() => { // Check this later if it's sensible on phones
+    const updateHeight = () => setViewportHeight(window.innerHeight); // Dynamically update the height
     window.addEventListener("resize", updateHeight);
     return () => window.removeEventListener("resize", updateHeight);
   }, []);
@@ -27,7 +25,7 @@ export default function App() {
   return (
     <div style={{ height: `${viewportHeight}px`, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {/* Top strip */}
-      <div style={{ height: "34px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", backgroundColor: "#888", borderBottom: "1px solid #eee" }}>
+      <div className="app-title-bar">
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className="hamburger-button"
@@ -38,8 +36,8 @@ export default function App() {
         >
           <span className="hamburger-bar"></span>
         </button>
-        <div style={{ fontWeight: "bold", color: "#f8f8f8ff" }}>PromptGPT</div>
-        <div style={{ fontSize: "12px", color: "#666" }}>v1.1</div>
+        <div className="app-title">PromptGPT</div>
+        <div style={{ fontSize: "12px", color: "#30498dff" }}>v1.2</div>
       </div>
 
       {/* Bottom pane */}
