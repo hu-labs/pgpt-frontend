@@ -22,22 +22,13 @@
   border-bottom: 1px solid #eee;
 }
 
-/* General button styles */
-button {
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-  transition: background-color 0.3s, color 0.3s;
-}
-
 /* Major button styles */
 .major-button {
   background-color: var(--major-button-bg, #f0f0f0);
   color: var(--major-button-color, #333);
   font-size: 0.9rem;
   font-weight: bold;
+  transition: background-color 0.1s, color 0.1s, outline 0s;
 
   padding: 7px 18px;
   border-radius: 6px;

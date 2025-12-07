@@ -5,7 +5,12 @@
 import type { Thread, Message, Preset } from "../types";
 
 const KEY = "promptgpt:v1";
-export interface Store { threads: Thread[]; messages: Message[]; presets: Preset[]; }
+export interface Store {
+  threads: Thread[];
+  messages: Message[];
+  presets: Preset[];
+}
+
 const empty: Store = { threads: [], messages: [], presets: [] };
 
 export function load(): Store {

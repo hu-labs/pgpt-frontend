@@ -26,6 +26,18 @@ body {
   min-width: 320px;
 }
 
+textarea {
+  font-family: inherit; 
+}
+
+input {
+  font-family: inherit;
+}
+
+button {
+  font-family: inherit; 
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
