@@ -1,6 +1,6 @@
 :root {
   --major-button-bg: #002752;
-  --major-button-hover-bg: #ffffff;
+  --major-button-hover-bg: #002752;
   --major-button-color: #ffffff;
 }
 
@@ -38,15 +38,15 @@
 
 .major-button:hover {
   background-color: var(--major-button-hover-bg, #ffffff);
-  color: var(--major-button-bg, #333);
+  color: #ffffff;
   outline: 1px solid var(--major-button-bg, #333);
   outline-offset: 0px;
 }
 
 .major-button:focus {
-  background-color: var(--major-button-hover-bg, #ffffff);
-  color: var(--major-button-bg, #333);
-  outline: 1px solid var(--major-button-bg, #333);
+  background-color: var(--major-button-hover-bg, #002752);
+  color: #ffffff;
+  outline: 2px solid #ff0000;
   outline-offset: 0px;
 }
 
@@ -140,6 +140,10 @@ ul {
   position: relative;
 }
 
+.hamburger-button:focus {
+  outline: 2px solid #ff0000;
+}
+
 .close-button {
   background: none;
   border: none;
@@ -157,9 +161,14 @@ ul {
 }
 
 .close-button:hover {
-  color: #ff0000; /* Optional hover effect */
+  color: #ff0000;
+  outline: transparent;
 }
 
+.close-button:focus {
+  color: #ff0000;
+  outline: transparent;
+}
 
 /* Dark mode styles */
 @media (prefers-color-scheme: dark) {

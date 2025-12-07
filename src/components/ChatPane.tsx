@@ -9,17 +9,17 @@ import type { Message } from "../types";
 export default function ChatPane({
   threadId,
   presetAppend,
-  onPresetApplied,
+  presetTrigger,
   onFocus,
 }: {
   threadId: string,
   presetAppend?: string,
-  onPresetApplied: () => void,
-  onFocus?: () => void // onFocus is optional
+  presetTrigger: number, // Trigger for the preset use
+  onFocus?: () => void
 }) {
   const [store, setStore] = useState(load());
   const [inputs, setInputs] = useState<Record<string, string>>({}); // 1 user input per threadId
-  const [localPreset, setLocalPreset] = useState<string | null>(null); // Local state for presetAppend
+
   const messages = store.messages.filter((m) => m.threadId === threadId);
 
   useEffect(() => {
@@ -32,17 +32,20 @@ export default function ChatPane({
     }
   }, [threadId]);
 
+  // NOTE: the space is added here before the preset text.
   useEffect(() => {
-    // Handle presetAppend changes
-    if (presetAppend && presetAppend !== localPreset) {
+    if (presetAppend) {
+      /*
       setInputs((prev) => ({
         ...prev,
         [threadId]: `${prev[threadId] || ""}${prev[threadId] ? "\n" : ""}${presetAppend}`,
+      }));*/
+      setInputs((prev) => ({
+        ...prev,
+        [threadId]: `${prev[threadId] || ""}${prev[threadId] ? " " : ""}${presetAppend}`,
       }));
-      setLocalPreset(presetAppend.trim()); // Track the last used preset
-      onPresetApplied(); // Notify parent that preset has been used
     }
-  }, [presetAppend, threadId, localPreset, onPresetApplied]);
+  }, [presetTrigger]); // Listen for preset use trigger
 
   function addMessage(role: "user" | "assistant", content: string) {
     const m: Message = {

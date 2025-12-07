@@ -26,6 +26,10 @@ export default function PresetList(
     save(next);
     setTitle("");
     setText("");
+    // Blur the button to prevent it from staying focused
+    const handleAddPreset = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.currentTarget.blur(); // Remove focus from the button
+    };
   }
 
   function updatePreset(id: string, patch: Partial<Preset>) {

@@ -13,6 +13,7 @@ import './App.css'
 export default function App() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [presetAppend, setPresetAppend] = useState<string>("");
+  const [presetTrigger, setPresetTrigger] = useState(0); // Trigger for preset append
   const [isMenuOpen, setIsMenuOpen] = useState(false); // State to toggle the left pane
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
 
@@ -78,8 +79,15 @@ export default function App() {
             &times;
           </button>
 
-          <ThreadList onSelect={id => setThreadId(id)} isMenuOpen={isMenuOpen} />
-          <PresetList onAppend={text => setPresetAppend(prev => prev === text ? `${text} ` : text)} isMenuOpen={isMenuOpen} />
+          <ThreadList onSelect={id => setThreadId(id)}
+                      isMenuOpen={isMenuOpen}
+          />
+          <PresetList onAppend={(text) => {
+                        setPresetTrigger((prev) => prev + 1); // Increment trigger
+                        setPresetAppend(text);
+                      }}
+                      isMenuOpen={isMenuOpen}
+          />
         </div>
 
         {/* Right pane */}
@@ -89,7 +97,7 @@ export default function App() {
             <ChatPane
               threadId={threadId}
               presetAppend={presetAppend}
-              onPresetApplied={() => setPresetAppend("")} // Clear presetAppend after 1 use
+              presetTrigger={presetTrigger} // Pass the trigger
               onFocus={() => setIsMenuOpen(false)} // Collapse the left pane when ChatPane gains focus
             />
             :
