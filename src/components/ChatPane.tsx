@@ -2,7 +2,7 @@
     messages display, composer, send
 */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { load, save } from "../lib/storage";
 import type { Message } from "../types";
 
@@ -19,6 +19,7 @@ export default function ChatPane({
 }) {
   const [store, setStore] = useState(load());
   const [inputs, setInputs] = useState<Record<string, string>>({}); // 1 user input per threadId
+  const messageContainerRef = useRef<HTMLDivElement>(null); // Ref for the message display area
 
   const messages = store.messages.filter((m) => m.threadId === threadId);
 
@@ -35,17 +36,19 @@ export default function ChatPane({
   // NOTE: the space is added here before the preset text.
   useEffect(() => {
     if (presetAppend) {
-      /*
-      setInputs((prev) => ({
-        ...prev,
-        [threadId]: `${prev[threadId] || ""}${prev[threadId] ? "\n" : ""}${presetAppend}`,
-      }));*/
       setInputs((prev) => ({
         ...prev,
         [threadId]: `${prev[threadId] || ""}${prev[threadId] ? " " : ""}${presetAppend}`,
       }));
     }
   }, [presetTrigger]); // Listen for preset use trigger
+
+  useEffect( () => {
+    // Scroll to the bottom
+    if (messageContainerRef.current) {
+      messageContainerRef.current.scrollTop = messageContainerRef.current.scrollHeight;
+    }
+  }, [messages]); // When messages get updated, need to scroll
 
   function addMessage(role: "user" | "assistant", content: string) {
     const m: Message = {
@@ -153,7 +156,9 @@ export default function ChatPane({
       onFocus={onFocus} // Attach the onFocus handler to the main container
       tabIndex={-1} // Ensure the div can receive focus
     >
+      {/* Message Display div */}
       <div
+        ref={messageContainerRef}
         style={{
           flex: 1,
           overflowY: "auto",
