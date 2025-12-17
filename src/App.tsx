@@ -38,7 +38,7 @@ export default function App() {
           <span className="hamburger-bar"></span>
         </button>
         <div className="app-title">PromptGPT</div>
-        <div style={{ fontSize: "12px", color: "#30498dff" }}>v1.2</div>
+        <div style={{ fontSize: "12px", color: "#30498dff" }}>v1.21</div>
       </div>
 
       {/* Bottom pane */}
