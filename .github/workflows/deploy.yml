@@ -1,0 +1,44 @@
+name: Deploy to S3
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # Using 20 as it's the current LTS for 2025
+          cache: 'npm'       # Caches npm dependencies to speed up future runs
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Project
+        env:
+          # .env file vars
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
+        run: npm run build
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: eu-west-2 # London
+
+      - name: Deploy to S3
+        # Ensure it points to 'dist' for Vite
+        run: aws s3 sync ./dist s3://pgpt-frontend-lambda --delete
+
+      - name: Invalidate CloudFront
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CF_DIST_ID }} --paths "/*"
