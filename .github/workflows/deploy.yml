@@ -8,8 +8,10 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -17,8 +19,28 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20" # Using 20 as it's the current LTS for 2025
-          cache: 'npm'       # Caches npm dependencies to speed up future runs
+          node-version: "20" # current LTS for 2025
+          cache: 'npm'       # Caches npm dependencies
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Unit Tests
+        run: npm test -- --coverage
+
+  deploy:
+    needs: test # Pass the test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
