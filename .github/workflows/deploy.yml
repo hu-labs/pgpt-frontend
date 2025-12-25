@@ -52,6 +52,13 @@ jobs:
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
         run: npm run build
 
+        # Save a good build
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: ./dist/
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
