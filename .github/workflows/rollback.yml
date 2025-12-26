@@ -1,0 +1,22 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Workflow Run ID to retrieve the artifact from"
+        required: true
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dist-artifact
+          run-id: ${{ github.event.inputs.run_id }}
+
+      - name: Deploy to S3
+        run: |
+          aws s3 sync dist/ s3://pgpt-frontend-lambda --delete
