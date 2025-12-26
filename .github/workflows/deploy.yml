@@ -55,21 +55,29 @@ jobs:
         run: npm run build
 
         # Save a good build
-      - name: Upload Build Artifacts
+      - name: Upload Dist Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts
+          name: dist-artifacts
           path: ./dist/
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: eu-west-2 # London
+          aws-region: eu-west-2
 
       - name: Deploy to S3
-        # Ensure it points to 'dist' for Vite
+        # 'dist' for Vite
         run: aws s3 sync ./dist s3://pgpt-frontend-lambda --delete
 
       - name: Invalidate CloudFront
         run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CF_DIST_ID }} --paths "/*"
+
+        # Release tag with date/time
+      - name: Tag the Release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$(date +'%Y.%m.%d-%H%M%S')" -m "Release on $(date)"
+          git push origin --tags
