@@ -1,0 +1,88 @@
+/*
+    theme.css — single source of truth for all color and shape tokens in the app.
+    Colors: raw palette primitives, then purpose-named semantic tokens (what
+    components actually use) in :root (light) and the trailing dark media
+    query. Shape (radius) tokens are theme-invariant, defined once in :root.
+    Component stylesheets should never contain raw color/radius literals —
+    only var(--color-*) / var(--radius-*) references.
+*/
+
+:root {
+  /* Primitives (raw palette scale, not for direct use by components) */
+  --indigo-600: #4f46e5;
+  --stone-100: #f5f5f4;
+  --stone-200: #e7e5e4;
+  --stone-300: #d6d3d1;
+  --stone-400: #a8a29e;
+  --stone-500: #78716c;
+  --stone-600: #57534e;
+  --stone-700: #44403c;
+  --stone-800: #292524;
+  --stone-900: #1c1917;
+
+  /* Shape: small consistent radius scale, shared by both themes */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+  --radius-full: 50%;
+
+  /* Semantic: brand/accent */
+  --color-accent: var(--stone-700);
+  --color-accent-hover: var(--stone-600);
+  --color-text-inverse: #ffffff;
+
+  /* Semantic: surfaces & borders */
+  --color-surface: var(--stone-100);
+  --color-surface-alt: var(--stone-200);
+  --color-border: var(--stone-300);
+  --color-border-strong: var(--stone-400);
+
+  /* Semantic: text */
+  --color-text: var(--stone-800);
+  --color-text-muted: var(--stone-500);
+
+  /* Semantic: danger/focus (hues intentionally unchanged from the original app) */
+  --color-danger: #ff0000;
+  --color-danger-hover: #ff1b1b;
+  --color-danger-subtle: #ffd4d4;
+  /* Only .major-button's focus ring flips color in dark mode (pre-existing quirk, kept as-is) */
+  --color-focus-ring: #ff0000;
+
+  /* Semantic: chat-specific */
+  /* One step darker than --color-surface so the bubble still stands out from the backdrop. */
+  --color-bubble-user-bg: var(--stone-200);
+  --color-bubble-user-text: var(--stone-800);
+  --color-typing-dot: var(--stone-400);
+  /* Standalone now: accent is charcoal, but links stay blue like ChatGPT's own markdown links. */
+  --color-link: var(--indigo-600);
+  --color-shadow: rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Semantic: brand/accent (inverts to a light surface, mirroring the light theme's dark-on-light) */
+    --color-accent: var(--stone-200);
+    --color-accent-hover: var(--stone-300);
+    --color-text-inverse: var(--stone-900);
+
+    /* Semantic: surfaces & borders */
+    --color-surface: var(--stone-900);
+    --color-surface-alt: var(--stone-800);
+    --color-border: var(--stone-700);
+    --color-border-strong: var(--stone-600);
+
+    /* Semantic: text */
+    --color-text: var(--stone-100);
+    --color-text-muted: var(--stone-400);
+
+    /* Ring sits against the page backdrop, not the button, so it stays high-contrast regardless. */
+    --color-focus-ring: #ffffff;
+
+    /* Semantic: chat-specific */
+    --color-bubble-user-bg: var(--stone-700);
+    --color-bubble-user-text: var(--stone-100);
+    --color-typing-dot: var(--stone-500);
+    --color-link: #6cb6ff;
+  }
+}

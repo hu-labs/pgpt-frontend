@@ -307,7 +307,7 @@ export default function ChatPane({
           display: "flex",
           alignItems: "flex-end",
           gap: "8px",
-          borderTop: "1px solid #eee",
+          borderTop: "1px solid var(--color-border)",
           paddingTop: "8px",
           paddingRight: "18px",
           paddingBottom: "8px",

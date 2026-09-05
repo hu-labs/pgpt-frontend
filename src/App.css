@@ -1,15 +1,9 @@
-:root {
-  --major-button-bg: #002752;
-  --major-button-hover-bg: #002752;
-  --major-button-color: #ffffff;
-}
-
 .app-title {
   flex-grow: 1;
   text-align: center;
   font-size: 1rem;
   font-weight: bold;
-  color: #f8f8f8ff;
+  color: var(--color-text-inverse);
 }
 
 .app-title-bar {
@@ -18,14 +12,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  background-color: var(--major-button-bg, #888);
+  background-color: var(--color-accent);
+  /* Deliberately theme-invariant: the accent bar keeps the same hairline in both themes. */
   border-bottom: 1px solid #eee;
 }
 
 /* Major button styles */
 .major-button {
-  background-color: var(--major-button-bg, #f0f0f0);
-  color: var(--major-button-color, #333);
+  background-color: var(--color-accent);
+  color: var(--color-text-inverse);
   font-size: 0.9rem;
   font-weight: bold;
   transition:
@@ -34,65 +29,67 @@
     outline 0s;
 
   padding: 7px 18px;
-  border-radius: 6px;
+  border-radius: var(--radius-pill);
   border: none;
   cursor: pointer;
 }
 
 .major-button:hover {
-  background-color: var(--major-button-hover-bg, #ffffff);
-  color: #ffffff;
-  outline: 1px solid var(--major-button-bg, #333);
+  background-color: var(--color-accent-hover);
+  /* Text-inverse tracks whichever surface is lighter/darker per theme, so this stays readable either way. */
+  color: var(--color-text-inverse);
+  outline: 1px solid var(--color-accent);
   outline-offset: 0px;
 }
 
 .major-button:focus {
-  background-color: var(--major-button-hover-bg, #002752);
-  color: #ffffff;
-  outline: 2px solid #ff0000;
+  background-color: var(--color-accent-hover);
+  color: var(--color-text-inverse);
+  outline: 2px solid var(--color-focus-ring);
   outline-offset: 0px;
 }
 
 /* Minor button styles */
 .minor-button {
   background-color: rgba(0, 0, 0, 0); /* transparent */
-  color: #333;
+  color: var(--color-text);
   font-size: 0.7rem;
   font-weight: bold;
 
   padding: 0px 4px;
   margin-bottom: 5px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;
 }
 
 .minor-button:hover {
   background-color: rgba(0, 0, 0, 0);
-  color: #ff1b1b;
-  outline: 0px solid #dddddd;
+  color: var(--color-danger-hover);
+  outline: 0px solid var(--color-border);
   outline-offset: 0px;
 }
 
 .minor-button:focus {
   background-color: rgba(0, 0, 0, 0);
-  color: #ff1b1b;
-  outline: 1px solid #ffd4d4;
+  color: var(--color-danger-hover);
+  outline: 1px solid var(--color-danger-subtle);
 }
 
 .threadInput {
   width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  padding: 4px 2px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  /* Extra left padding keeps text clear of the now-rounder corner. */
+  padding: 4px 10px;
   font-size: 14px;
   font-family: inherit;
 }
 
 .chatTextArea {
   width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
   padding: 8px;
   font-size: 14px;
   font-family: inherit;
@@ -100,7 +97,7 @@
 
 /* Add theming for the left pane */
 .left-pane {
-  background-color: #f9f9f9; /* Slightly darker than white for light theme */
+  background-color: var(--color-surface-alt);
 }
 
 ul {
@@ -116,7 +113,9 @@ ul {
   display: block;
   width: 24px; /* Same as button width */
   height: 3px; /* Thickness of the bars */
-  background-color: #f7f7f7; /* Color of the bars */
+  background-color: var(
+    --color-text-inverse
+  ); /* Contrasts with the accent title bar */
   position: absolute;
 }
 
@@ -137,14 +136,20 @@ ul {
   padding: 0;
   width: 24px; /* Menu button size */
   height: 24px;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  transition: background-color 0.15s;
+}
+
+.hamburger-button:hover {
+  background-color: var(--color-surface-alt);
 }
 
 .hamburger-button:focus {
-  outline: 2px solid #ff0000;
+  outline: 2px solid var(--color-danger);
 }
 
 .close-button {
@@ -153,65 +158,35 @@ ul {
   cursor: pointer;
   font-size: 50px; /* Adjust size as needed */
   font-weight: bold;
-  color: #333; /* Adjust color as needed */
+  color: var(--color-text);
   padding: 0;
   line-height: 1; /* Helps with vertical centering */
   height: 24px;
   width: 24px;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .close-button:hover {
-  color: #ff0000;
+  color: var(--color-danger);
   outline: transparent;
 }
 
 .close-button:focus {
-  color: #ff0000;
+  color: var(--color-danger);
   outline: transparent;
 }
 
-/* Dark mode styles */
+/* Dark mode: token values above already re-theme most colors; only the states below
+   have interaction-pattern differences (outline colors) that aren't pure value swaps. */
 @media (prefers-color-scheme: dark) {
-  .major-button {
-    background-color: #ffffff;
-    color: #000000;
-  }
-
-  .major-button:hover {
-    background-color: #414141;
-    color: white;
-    outline: white 2px solid;
-  }
-
-  .major-button:focus {
-    background-color: #414141;
-    color: white;
-    outline: white 2px solid;
-  }
-
-  .minor-button {
-    background-color: rgba(0, 0, 0, 0);
-    color: #fff;
-  }
-
   .minor-button:hover {
-    background-color: rgba(0, 0, 0, 0);
-    outline: 1px solid #5a5a5a;
+    outline: 1px solid var(--color-border-strong);
   }
 
   .minor-button:focus {
-    background-color: rgba(0, 0, 0, 0);
-    outline: 1px solid #4e4e4e;
-  }
-
-  .left-pane {
-    background-color: #333; /* Slightly lighter than black for dark theme */
-  }
-
-  .close-button {
-    color: #ececec; /* Adjust color as needed */
+    outline: 1px solid var(--color-border-strong);
   }
 }

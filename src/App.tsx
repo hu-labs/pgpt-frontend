@@ -47,7 +47,9 @@ export default function App() {
           <span className="hamburger-bar"></span>
         </button>
         <div className="app-title">PromptGPT</div>
-        <div style={{ fontSize: "12px", color: "#30498dff" }}>v0.26.0814</div>
+        <div style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
+          v0.26.0814
+        </div>
       </div>
 
       {/* Bottom pane */}
@@ -69,7 +71,7 @@ export default function App() {
             left: isMenuOpen ? 0 : "-296px", // Slide in/out based on `isMenuOpen`
             width: "300px",
             height: "100%",
-            borderRight: "1px solid #eee",
+            borderRight: "1px solid var(--color-border)",
             display: "grid",
             gridTemplateRows: "1fr 1fr",
             padding: "22px 28px",
@@ -116,6 +118,7 @@ export default function App() {
             overflowY: "auto",
             display: "flex",
             flexDirection: "column",
+            backgroundColor: "var(--color-surface)",
           }}
         >
           {threadId ? (
