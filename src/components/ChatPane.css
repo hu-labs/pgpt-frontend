@@ -16,9 +16,9 @@
   word-wrap: break-word;
   padding: 8px 14px;
   margin-bottom: 12px;
-  border-radius: 18px;
-  background-color: var(--bubble-user-bg, #e9e9eb);
-  color: var(--bubble-user-color, #1a1a1a);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bubble-user-bg);
+  color: var(--color-bubble-user-text);
 }
 
 .chat-message-assistant {
@@ -36,8 +36,8 @@
 .typing-indicator span {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
-  background-color: var(--typing-dot-color, #999);
+  border-radius: var(--radius-full);
+  background-color: var(--color-typing-dot);
   animation: typing-bounce 1.2s infinite ease-in-out both;
 }
 
@@ -77,12 +77,12 @@
   border: none;
   cursor: pointer;
   font-size: 0.75rem;
-  color: var(--message-copy-color, #666);
+  color: var(--color-text-muted);
   padding: 2px 4px;
 }
 
 .message-copy:hover {
-  color: var(--major-button-bg, #002752);
+  color: var(--color-accent);
 }
 
 /* Markdown content (assistant messages only) */
@@ -105,18 +105,18 @@
 .markdown-content blockquote {
   margin: 8px 0;
   padding-left: 12px;
-  border-left: 3px solid var(--blockquote-border, #ccc);
-  color: var(--blockquote-color, #666);
+  border-left: 3px solid var(--color-border-strong);
+  color: var(--color-text-muted);
 }
 
 .markdown-content hr {
   border: none;
-  border-top: 1px solid var(--hr-color, #ddd);
+  border-top: 1px solid var(--color-border);
   margin: 12px 0;
 }
 
 .markdown-content a {
-  color: var(--link-color, #0a66c2);
+  color: var(--color-link);
 }
 
 .markdown-content table {
@@ -127,22 +127,22 @@
 
 .markdown-content th,
 .markdown-content td {
-  border: 1px solid var(--table-border, #ccc);
+  border: 1px solid var(--color-border-strong);
   padding: 6px 10px;
   text-align: left;
 }
 
 .markdown-content th {
-  background-color: var(--table-header-bg, #f0f0f0);
+  background-color: var(--color-surface-alt);
 }
 
 .markdown-content tr:nth-child(even) td {
-  background-color: var(--table-zebra-bg, #f9f9f9);
+  background-color: var(--color-surface);
 }
 
 .markdown-content code {
-  background-color: var(--inline-code-bg, #f0f0f0);
-  border-radius: 4px;
+  background-color: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
   padding: 1px 5px;
   font-size: 0.9em;
 }
@@ -155,9 +155,9 @@
 
 .code-block {
   margin: 8px 0;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid var(--code-block-border, #ddd);
+  border: 1px solid var(--color-border);
 }
 
 .code-block-header {
@@ -166,8 +166,8 @@
   align-items: center;
   padding: 4px 10px;
   font-size: 0.75rem;
-  background-color: var(--code-block-header-bg, #eaeaea);
-  color: var(--code-block-header-color, #444);
+  background-color: var(--color-surface-alt);
+  color: var(--color-text-muted);
 }
 
 .code-block-copy {
@@ -186,58 +186,4 @@
   margin: 0;
   padding: 10px;
   overflow-x: auto;
-}
-
-@media (prefers-color-scheme: dark) {
-  .chat-bubble-user {
-    --bubble-user-bg: #383838;
-    --bubble-user-color: #f0f0f0;
-  }
-
-  .message-copy {
-    --message-copy-color: #aaa;
-  }
-
-  .typing-indicator span {
-    --typing-dot-color: #777;
-  }
-
-  .markdown-content blockquote {
-    --blockquote-border: #555;
-    --blockquote-color: #aaa;
-  }
-
-  .markdown-content hr {
-    --hr-color: #444;
-  }
-
-  .markdown-content a {
-    --link-color: #6cb6ff;
-  }
-
-  .markdown-content th,
-  .markdown-content td {
-    --table-border: #555;
-  }
-
-  .markdown-content th {
-    --table-header-bg: #333;
-  }
-
-  .markdown-content tr:nth-child(even) td {
-    --table-zebra-bg: #2a2a2a;
-  }
-
-  .markdown-content code {
-    --inline-code-bg: #333;
-  }
-
-  .code-block {
-    --code-block-border: #444;
-  }
-
-  .code-block-header {
-    --code-block-header-bg: #2a2a2a;
-    --code-block-header-color: #ccc;
-  }
 }

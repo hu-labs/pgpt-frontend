@@ -75,7 +75,7 @@ export default function PresetList({
   return (
     <div>
       <div style={{ textAlign: "center" }}>
-        <h4 style={{ color: "#aaaaaaff" }}>Prompt Presets</h4>
+        <h4 style={{ color: "var(--color-text-muted)" }}>Prompt Presets</h4>
 
         <input
           className="threadInput"
@@ -171,7 +171,7 @@ export default function PresetList({
               style={{
                 width: "20px",
                 height: "20px",
-                borderRadius: "50%",
+                borderRadius: "var(--radius-full)",
                 border: "none",
                 background: "none",
                 cursor: "pointer",
@@ -205,10 +205,10 @@ export default function PresetList({
                   right: "-20px",
                   top: "20px",
                   paddingLeft: "5px",
-                  background: "white",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  background: "var(--color-surface)",
+                  border: "1px solid var(--color-border-strong)",
+                  borderRadius: "var(--radius-sm)",
+                  boxShadow: "0 2px 8px var(--color-shadow)",
                   zIndex: 1000,
                   minWidth: "20px",
                   maxWidth: "55px",
