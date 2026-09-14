@@ -15,6 +15,12 @@
   overflow-x: hidden;
 }
 
+.contentColumn,
+.composerInner {
+  width: min(100%, 50rem);
+  margin-inline: auto;
+}
+
 .userMessage {
   width: fit-content;
   max-width: min(75%, 46rem);
@@ -78,11 +84,14 @@
 }
 
 .composer {
+  padding: var(--space-2) var(--space-4);
+  border-block-start: 1px solid var(--color-border);
+}
+
+.composerInner {
   display: flex;
   align-items: flex-end;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  border-block-start: 1px solid var(--color-border);
 }
 
 .composerInput {

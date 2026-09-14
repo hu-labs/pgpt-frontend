@@ -35,4 +35,31 @@ describe("responsive navigation", () => {
 
     expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
+
+  test("collapses and restores the desktop sidebar", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<App />);
+    const shell = container.firstElementChild as HTMLElement;
+
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(shell.className).toContain("shellSidebarCollapsed");
+
+    await user.click(screen.getByRole("button", { name: "Expand sidebar" }));
+    expect(shell.className).not.toContain("shellSidebarCollapsed");
+  });
+
+  test("resizes the desktop sidebar with the keyboard", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    const separator = screen.getByRole("separator", {
+      name: "Resize sidebar",
+    });
+
+    expect(separator).toHaveAttribute("aria-valuenow", "300");
+    separator.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(separator).toHaveAttribute("aria-valuenow", "316");
+    await user.keyboard("{Home}");
+    expect(separator).toHaveAttribute("aria-valuenow", "240");
+  });
 });

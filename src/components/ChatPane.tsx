@@ -274,49 +274,53 @@ export default function ChatPane({
     >
       {/* Message Display div */}
       <div ref={messageContainerRef} className={styles.messages} tabIndex={-1}>
-        {messages.map((m) =>
-          m.role === "user" ? (
-            <div
-              key={m.id}
-              className={styles.userMessage}
-              data-message-role="user"
-            >
-              {m.content}
-            </div>
-          ) : (
-            <AssistantMessage key={m.id} content={m.content} />
-          ),
-        )}
-        {pending[threadId] &&
-          (pending[threadId].content ? (
-            <div className={styles.assistantMessage}>
-              <MarkdownMessage content={pending[threadId].content} />
-            </div>
-          ) : (
-            <TypingIndicator />
-          ))}
+        <div className={styles.contentColumn}>
+          {messages.map((m) =>
+            m.role === "user" ? (
+              <div
+                key={m.id}
+                className={styles.userMessage}
+                data-message-role="user"
+              >
+                {m.content}
+              </div>
+            ) : (
+              <AssistantMessage key={m.id} content={m.content} />
+            ),
+          )}
+          {pending[threadId] &&
+            (pending[threadId].content ? (
+              <div className={styles.assistantMessage}>
+                <MarkdownMessage content={pending[threadId].content} />
+              </div>
+            ) : (
+              <TypingIndicator />
+            ))}
+        </div>
       </div>
       <div className={styles.composer}>
-        <textarea
-          className={`${controls.field} ${styles.composerInput}`}
-          value={inputs[threadId] || ""}
-          onChange={(e) =>
-            setInputs((prev) => ({ ...prev, [threadId]: e.target.value }))
-          }
-          placeholder="Type a message..."
-        />
-        <button
-          type="button"
-          className={`${controls.button} ${controls.primary} ${styles.sendButton}`}
-          onClick={send}
-          disabled={(inputs[threadId]?.trim().length || 0) === 0}
-          aria-label="Send message"
-        >
-          {/*▶*/}
-          <svg width="22" height="22" viewBox="0 0 16 13" fill="currentColor">
-            <path d="M4 2l10 6-10 6V2z" />
-          </svg>
-        </button>
+        <div className={styles.composerInner}>
+          <textarea
+            className={`${controls.field} ${styles.composerInput}`}
+            value={inputs[threadId] || ""}
+            onChange={(e) =>
+              setInputs((prev) => ({ ...prev, [threadId]: e.target.value }))
+            }
+            placeholder="Type a message..."
+          />
+          <button
+            type="button"
+            className={`${controls.button} ${controls.primary} ${styles.sendButton}`}
+            onClick={send}
+            disabled={(inputs[threadId]?.trim().length || 0) === 0}
+            aria-label="Send message"
+          >
+            {/*▶*/}
+            <svg width="22" height="22" viewBox="0 0 16 13" fill="currentColor">
+              <path d="M4 2l10 6-10 6V2z" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );
