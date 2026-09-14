@@ -6,13 +6,13 @@ import { useState, useRef } from "react";
 import { load, save } from "../lib/storage";
 import { useClickOutside } from "../lib/useClickOutside";
 import type { Preset } from "../types";
+import controls from "./Controls.module.css";
+import styles from "./SidebarList.module.css";
 
 export default function PresetList({
   onAppend,
-  isMenuOpen,
 }: {
   onAppend: (text: string) => void;
-  isMenuOpen: boolean;
 }) {
   const [store, setStore] = useState(load());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -73,61 +73,53 @@ export default function PresetList({
   }
 
   return (
-    <div>
-      <div style={{ textAlign: "center" }}>
-        <h4 style={{ color: "var(--color-text-muted)" }}>Prompt Presets</h4>
+    <section className={styles.section} aria-labelledby="presets-heading">
+      <h2 id="presets-heading" className={styles.heading}>
+        Prompt presets
+      </h2>
 
+      <div className={styles.createFields}>
+        <label className={controls.visuallyHidden} htmlFor="preset-title">
+          Prompt title
+        </label>
         <input
-          className="threadInput"
+          id="preset-title"
+          className={controls.field}
           placeholder="Prompt title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          style={{ display: "block", margin: "0 auto", marginBottom: "8px" }}
-          tabIndex={isMenuOpen ? 0 : -1}
         />
 
+        <label className={controls.visuallyHidden} htmlFor="preset-text">
+          Prompt to save
+        </label>
         <textarea
-          className="threadInput"
+          id="preset-text"
+          className={controls.field}
           placeholder="Prompt you want to save"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          style={{
-            display: "block",
-            margin: "0 auto",
-            marginBottom: "8px",
-            resize: "vertical",
-          }}
-          tabIndex={isMenuOpen ? 0 : -1}
         />
 
-        <div style={{ marginTop: "8px" }}>
-          <button
-            onClick={createPreset}
-            className="major-button"
-            style={{ display: "block", margin: "2px auto 14px" }}
-            tabIndex={isMenuOpen ? 0 : -1}
-          >
-            Add preset
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={createPreset}
+          className={`${controls.button} ${controls.primary} ${styles.centeredAction}`}
+        >
+          Add preset
+        </button>
       </div>
 
-      <ul>
+      <ul className={styles.list}>
         {store.presets.map((p) => (
-          <li
-            key={p.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              position: "relative",
-              marginBottom: "8px",
-            }}
-          >
+          <li className={styles.item} key={p.id}>
             <input
-              className="threadInput"
+              className={`${controls.field} ${styles.itemInput}${
+                editingPresetId === p.id ? ` ${styles.itemInputEditing}` : ""
+              }`}
               defaultValue={p.title}
               readOnly={editingPresetId !== p.id}
+              aria-label={`Preset title: ${p.title}`}
               onClick={() => {
                 if (editingPresetId !== p.id) {
                   onAppend(p.text);
@@ -160,96 +152,39 @@ export default function PresetList({
               ref={(e) => {
                 presetInputRefs.current[p.id] = e;
               }}
-              style={{
-                flex: 1,
-                cursor: editingPresetId === p.id ? "text" : "pointer",
-              }}
-              tabIndex={isMenuOpen ? 0 : -1}
             />
             <button
+              type="button"
+              className={`${controls.button} ${controls.icon} ${styles.actionsToggle}`}
               onClick={() => setOpenMenuId(openMenuId === p.id ? null : p.id)}
-              style={{
-                width: "20px",
-                height: "20px",
-                borderRadius: "var(--radius-full)",
-                border: "none",
-                background: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "18px",
-                padding: 0,
-              }}
-              tabIndex={isMenuOpen ? 0 : -1}
+              aria-label={`Actions for ${p.title}`}
+              aria-expanded={openMenuId === p.id}
+              aria-controls={`preset-actions-${p.id}`}
             >
-              <span
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  fontSize: "10px",
-                  lineHeight: "4px",
-                  transform: "translateY(0px)",
-                }}
-              >
-                <span>•</span>
-                <span>•</span>
-                <span>•</span>
-              </span>
+              <span aria-hidden="true">⋮</span>
             </button>
             {openMenuId === p.id && (
               <div
                 ref={menuRef}
-                style={{
-                  position: "absolute",
-                  right: "-20px",
-                  top: "20px",
-                  paddingLeft: "5px",
-                  background: "var(--color-surface)",
-                  border: "1px solid var(--color-border-strong)",
-                  borderRadius: "var(--radius-sm)",
-                  boxShadow: "0 2px 8px var(--color-shadow)",
-                  zIndex: 1000,
-                  minWidth: "20px",
-                  maxWidth: "55px",
-                }}
+                id={`preset-actions-${p.id}`}
+                className={styles.actionsPanel}
               >
                 <button
+                  type="button"
                   onClick={() => {
                     enterEditMode(p.id);
                   }}
-                  className="minor-button"
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    border: "none",
-                    borderRadius: 0,
-                    borderBottom: "0px solid #eee",
-                    paddingTop: "0px",
-                    paddingBottom: "4px",
-                    marginTop: "0px",
-                    marginBottom: "0px",
-                  }}
-                  tabIndex={isMenuOpen ? 0 : -1}
+                  className={`${controls.button} ${styles.actionButton}`}
                 >
                   Rename
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     deletePreset(p.id);
                     setOpenMenuId(null);
                   }}
-                  className="minor-button"
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    border: "none",
-                    borderRadius: 0,
-                    borderTop: "0px solid #ca8e17",
-                    paddingTop: "4px",
-                    margin: "0px",
-                  }}
-                  tabIndex={isMenuOpen ? 0 : -1}
+                  className={`${controls.button} ${styles.actionButton}`}
                 >
                   Delete
                 </button>
@@ -258,6 +193,6 @@ export default function PresetList({
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }

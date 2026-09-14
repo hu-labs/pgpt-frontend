@@ -9,6 +9,8 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { useCopyToClipboard } from "../lib/useCopyToClipboard";
+import controls from "./Controls.module.css";
+import styles from "./MarkdownMessage.module.css";
 
 function CodeBlock({
   className,
@@ -20,12 +22,12 @@ function CodeBlock({
   const lang = /language-(\w+)/.exec(className || "")?.[1] ?? "text";
 
   return (
-    <div className="code-block">
-      <div className="code-block-header">
-        <span className="code-block-lang">{lang}</span>
+    <div className={styles.codeBlock}>
+      <div className={styles.codeBlockHeader}>
+        <span>{lang}</span>
         <button
           type="button"
-          className="code-block-copy"
+          className={`${controls.button} ${styles.codeBlockCopy}`}
           onClick={() =>
             copy((codeRef.current?.textContent ?? "").replace(/\n$/, ""))
           }
@@ -68,7 +70,7 @@ const components: Components = {
 
 export default function MarkdownMessage({ content }: { content: string }) {
   return (
-    <div className="markdown-content">
+    <div className={styles.content}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}

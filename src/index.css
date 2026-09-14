@@ -13,28 +13,27 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html,
-body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden; /* Prevent scrolling at the document level */
-  height: 100%; /* Ensure the body takes up the full height */
+body,
+#root {
+  width: 100%;
+  height: 100%;
 }
 
 body {
-  display: flex;
-  flex-direction: column; /* vertically stack content */
+  margin: 0;
+  overflow: hidden;
   min-width: 320px;
 }
 
+button,
+input,
 textarea {
-  font-family: inherit;
-}
-
-input {
-  font-family: inherit;
-}
-
-button {
   font-family: inherit;
 }
