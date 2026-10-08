@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { load, save } from "../lib/storage";
@@ -17,6 +17,19 @@ describe("sidebar list behavior", () => {
     expect(onSelect).toHaveBeenCalledOnce();
     expect(screen.getByDisplayValue("New chat")).toBeInTheDocument();
     expect(load().threads).toHaveLength(1);
+
+    const input = screen.getByDisplayValue("New chat") as HTMLInputElement;
+    await waitFor(() => expect(input).toHaveFocus());
+    expect(input.readOnly).toBe(false);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe("New chat".length);
+
+    // Typing replaces the highlighted default title; Enter saves and locks it.
+    await user.keyboard("My conversation{Enter}");
+    expect(input).toHaveValue("My conversation");
+    expect(load().threads[0].title).toBe("My conversation");
+    expect(input.readOnly).toBe(true);
+    expect(input).not.toHaveFocus();
   });
 
   test("preserves thread rename, Escape, outside-click, and delete behavior", async () => {
