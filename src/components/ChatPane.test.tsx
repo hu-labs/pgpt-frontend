@@ -6,7 +6,11 @@ import type { Message } from "../types";
 import ChatPane from "./ChatPane";
 
 function seedMessages(messages: Message[]) {
-  save({ threads: [], messages, presets: [] });
+  save({
+    threads: [{ id: "t1", title: "Chat", createdAt: 0, updatedAt: 0 }],
+    messages,
+    presets: [],
+  });
 }
 
 // A fetch()-body-shaped stream the test can push SSE chunks into on demand,
@@ -53,6 +57,7 @@ const originalFetch = globalThis.fetch;
 
 beforeEach(() => {
   localStorage.clear();
+  seedMessages([]);
   Object.defineProperty(navigator, "clipboard", {
     value: { writeText: vi.fn().mockResolvedValue(undefined) },
     configurable: true,

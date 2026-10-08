@@ -3,7 +3,7 @@
 */
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { load, save } from "../lib/storage";
+import { getStore, subscribeStore, useStore } from "../lib/storage";
 import { useCopyToClipboard } from "../lib/useCopyToClipboard";
 import type { Message } from "../types";
 import MarkdownMessage from "./MarkdownMessage";
@@ -84,30 +84,48 @@ export default function ChatPane({
   presetTrigger,
   onFocus,
 }: {
-  threadId: string;
+  threadId: string | null;
   presetAppend?: string;
   presetTrigger: number; // Trigger for the preset use
   onFocus?: () => void;
 }) {
-  const [store, setStore] = useState(load());
+  const [store, setStore] = useStore();
   const [inputs, setInputs] = useState<Record<string, string>>({}); // 1 user input per threadId
   const [pending, setPending] = useState<Record<string, PendingReply>>({}); // in-flight assistant reply per threadId; not persisted until it finishes
   const messageContainerRef = useRef<HTMLDivElement>(null); // Ref for the message display area
 
   const messages = store.messages.filter((m) => m.threadId === threadId);
 
-  // threadId has changed. Maybe a new thread, or thread switching.
+  const requests = useRef(new Map<string, AbortController>());
+
   useEffect(() => {
-    setInputs((previousInputs) => {
-      if (threadId in previousInputs) {
-        return previousInputs; // Save the existing input if threadId already exists.
+    const controllers = requests.current;
+    // Remove only deleted threads' requests/drafts, but preserve other chats.
+    const unsubscribe = subscribeStore(() => {
+      const exists = (id: string) =>
+        getStore().threads.some((thread) => thread.id === id);
+      for (const [id, controller] of controllers) {
+        if (!exists(id)) {
+          controller.abort();
+          controllers.delete(id);
+        }
       }
-      return { ...previousInputs, [threadId]: "" }; // Create an empty input for the threadId.
+      setInputs((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([id]) => exists(id))),
+      );
+      setPending((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([id]) => exists(id))),
+      );
     });
-  }, [threadId]);
+    return () => {
+      unsubscribe();
+      controllers.forEach((controller) => controller.abort());
+      controllers.clear();
+    };
+  }, []);
 
   const appendPreset = useEffectEvent(() => {
-    if (!presetAppend) return;
+    if (!threadId || !presetAppend) return;
     setInputs((prev) => ({
       ...prev,
       // If user text exists, preserve it then add space before appending.
@@ -119,7 +137,7 @@ export default function ChatPane({
     appendPreset();
   }, [presetTrigger]);
 
-  const streamingContent = pending[threadId]?.content;
+  const streamingContent = threadId ? pending[threadId]?.content : undefined;
   useEffect(() => {
     // Scroll to the bottom
     if (messageContainerRef.current) {
@@ -129,6 +147,7 @@ export default function ChatPane({
   }, [messages, streamingContent]); // Also scroll as a streaming reply grows
 
   function addMessage(role: "user" | "assistant", content: string) {
+    if (!threadId) return;
     const m: Message = {
       id: crypto.randomUUID(),
       threadId,
@@ -137,13 +156,19 @@ export default function ChatPane({
       createdAt: Date.now(),
     };
     setStore((prev) => {
-      const next = { ...prev, messages: [...prev.messages, m] };
-      save(next);
-      return next;
+      // Final guard against a reply or error arriving after its thread was deleted.
+      if (!prev.threads.some((thread) => thread.id === threadId)) return prev;
+      return { ...prev, messages: [...prev.messages, m] };
     });
   }
 
   async function send() {
+    if (
+      !threadId ||
+      requests.current.has(threadId) ||
+      !getStore().threads.some((thread) => thread.id === threadId)
+    )
+      return;
     const input = inputs[threadId] || "";
     if (!input.trim()) return;
 
@@ -156,34 +181,31 @@ export default function ChatPane({
       createdAt: Date.now(),
     };
 
-    let threadMessages: { role: string; content: string }[] = [];
-
-    // Need the user input to go into the stored messages before fetch()
-    await new Promise<void>((resolve) => {
-      setStore((prev) => {
-        const next = { ...prev, messages: [...prev.messages, userMessage] };
-        save(next);
-
-        // Prepare the message array in threadMessages for fetch()
-        threadMessages = next.messages
-          .filter((m) => m.threadId === threadId)
-          .map((m) => ({ role: m.role, content: m.content }));
-
-        resolve(); // Ensure this step completes before proceeding
-        return next;
-      });
-    });
+    const next = setStore((prev) => ({
+      ...prev,
+      messages: [...prev.messages, userMessage],
+    }));
+    const threadMessages = next.messages
+      .filter((message) => message.threadId === threadId)
+      .map(({ role, content }) => ({ role, content }));
+    const controller = new AbortController();
+    requests.current.set(threadId, controller);
+    // Aborting is best effort: ignore late results even if the response already arrived.
+    const cancelled = () =>
+      controller.signal.aborted ||
+      !getStore().threads.some((thread) => thread.id === threadId);
 
     // Clear the input box for this thread
     setInputs((prev) => ({ ...prev, [threadId]: "" }));
-    // TODO ?: Consider locking the send button here?
 
-    const clearPending = () =>
+    const clearPending = () => {
+      requests.current.delete(threadId);
       setPending((prev) => {
         const next = { ...prev };
         delete next[threadId];
         return next;
       });
+    };
 
     setPending((prev) => ({
       ...prev,
@@ -195,15 +217,19 @@ export default function ChatPane({
       // fetch() from the backend
       response = await fetch(`${import.meta.env.VITE_API_URL}`, {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
-          // Local DEBUG version will require the key.
-          //"X-Api-Key": import.meta.env.VITE_API_KEY,
+          // Insert key if in local debug mode
+          ...(import.meta.env.DEV && import.meta.env.VITE_API_KEY
+            ? { "X-Api-Key": import.meta.env.VITE_API_KEY }
+            : {}),
         },
         body: JSON.stringify({ threadId, messages: threadMessages }),
       });
     } catch (err) {
+      if (cancelled()) return;
       const error = err as Error;
       clearPending();
       addMessage(
@@ -213,6 +239,7 @@ export default function ChatPane({
       return; // Exit early if the fetch fails
     }
 
+    if (cancelled()) return;
     if (!response.ok) {
       clearPending();
       if (response.status === 504) {
@@ -236,6 +263,7 @@ export default function ChatPane({
     let terminated = false; // true once a "done" or "error" event is seen
     try {
       for await (const { event, data } of readSseEvents(response.body)) {
+        if (cancelled()) return;
         if (event === "delta") {
           finalContent += data.content ?? "";
           setPending((prev) => ({
@@ -250,10 +278,12 @@ export default function ChatPane({
         }
       }
     } catch (err) {
+      if (cancelled()) return;
       const error = err as Error;
       finalContent += `${finalContent ? "\n\n" : ""}⚠️ Error: Lost connection to backend. ${error.message}`;
     }
 
+    if (cancelled()) return;
     if (!terminated) {
       // Connection closed without a clean "done"/"error" - likely a timeout further upstream.
       finalContent += `${finalContent ? "\n\n" : ""}⚠️ Response interrupted (connection closed before finishing, possibly a timeout).`;
@@ -265,6 +295,8 @@ export default function ChatPane({
       finalContent || "⚠️ Error: Backend returned an empty response.",
     );
   }
+
+  if (!threadId) return null;
 
   return (
     <div
@@ -312,7 +344,10 @@ export default function ChatPane({
             type="button"
             className={`${controls.button} ${controls.primary} ${styles.sendButton}`}
             onClick={send}
-            disabled={(inputs[threadId]?.trim().length || 0) === 0}
+            disabled={
+              !!pending[threadId] ||
+              (inputs[threadId]?.trim().length || 0) === 0
+            }
             aria-label="Send message"
           >
             {/*▶*/}
