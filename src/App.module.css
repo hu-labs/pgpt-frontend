@@ -21,12 +21,19 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: var(--space-6);
   padding: var(--space-8) var(--space-6) var(--space-6);
   overflow: hidden;
   border-inline-end: 1px solid var(--color-border);
   background: var(--color-surface-alt);
+}
+
+/* The footer stays outside both scrolling lists, keeping authentication visible. */
+.sidebarFooter {
+  min-width: 0;
+  justify-self: end;
+  max-width: 100%;
 }
 
 .shellSidebarCollapsed .sidebar {

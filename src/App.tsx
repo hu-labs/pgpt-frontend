@@ -9,6 +9,7 @@ import { useStore } from "./lib/storage";
 import ThreadList from "./components/ThreadList";
 import PresetList from "./components/PresetList";
 import ChatPane from "./components/ChatPane";
+import AuthButton from "./components/AuthButton";
 import controls from "./components/Controls.module.css";
 import styles from "./App.module.css";
 
@@ -128,6 +129,10 @@ export default function App() {
             setPresetAppend(text);
           }}
         />
+
+        <footer className={styles.sidebarFooter}>
+          <AuthButton />
+        </footer>
 
         <div
           className={styles.sidebarResizeHandle}

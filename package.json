@@ -17,6 +17,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "aws-amplify": "^6.22.1",
     "highlight.js": "^11.12.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -42,6 +43,7 @@
     "globals": "^16.5.0",
     "jsdom": "^29.1.1",
     "prettier": "^3.9.6",
+    "rollup-plugin-visualizer": "^7.1.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.3",
     "vite": "^7.2.2",

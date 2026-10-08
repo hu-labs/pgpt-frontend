@@ -37,7 +37,10 @@ jobs:
       S3_BUCKET: ${{ vars.S3_BUCKET }}
       CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
       VITE_API_URL: ${{ vars.RELATIVE_API_URL }}
-
+      # COGNITO
+      VITE_COGNITO_USER_POOL_ID: ${{ vars.COGNITO_USER_POOL_ID }}
+      VITE_COGNITO_CLIENT_ID: ${{ vars.COGNITO_CLIENT_ID }}
+      VITE_COGNITO_LOGIN_URL: ${{ vars.COGNITO_LOGIN_URL }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
