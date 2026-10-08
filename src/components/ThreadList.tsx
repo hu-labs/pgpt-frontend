@@ -24,6 +24,19 @@ export default function ThreadList({
 
   useClickOutside(menuRef, () => setOpenMenuId(null));
 
+  // Rename thread helper: focus and select the input for the given thread
+  function enterEditMode(id: string) {
+    setEditingThreadId(id);
+    setOpenMenuId(null);
+    setTimeout(() => {
+      const input = inputRefs.current[id];
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 0);
+  }
+
   function createThread() {
     const t: Thread = {
       id: crypto.randomUUID(),
@@ -34,10 +47,8 @@ export default function ThreadList({
     setStore((prev) => ({ ...prev, threads: [t, ...prev.threads] }));
     onSelect(t.id);
 
-    // Focus the input field for the new thread
-    setTimeout(() => {
-      inputRefs.current[t.id]?.focus();
-    }, 0);
+    // New threads use the same focused, selected title editor as Rename.
+    enterEditMode(t.id);
   }
 
   function renameThread(id: string, title: string) {
@@ -52,18 +63,6 @@ export default function ThreadList({
       return next;
     });
     setEditingThreadId(null);
-  }
-
-  function enterEditMode(id: string) {
-    setEditingThreadId(id);
-    setOpenMenuId(null);
-    setTimeout(() => {
-      const input = inputRefs.current[id];
-      if (input) {
-        input.focus();
-        input.select();
-      }
-    }, 0);
   }
 
   function deleteThread(id: string) {
