@@ -7,7 +7,8 @@ import { load, save } from "../lib/storage";
 import { useCopyToClipboard } from "../lib/useCopyToClipboard";
 import type { Message } from "../types";
 import MarkdownMessage from "./MarkdownMessage";
-import "./ChatPane.css";
+import controls from "./Controls.module.css";
+import styles from "./ChatPane.module.css";
 
 /*
   SSE contract emitted by the backend (see backend-serverless-repo handler.js):
@@ -50,12 +51,12 @@ async function* readSseEvents(body: ReadableStream<Uint8Array>) {
 function AssistantMessage({ content }: { content: string }) {
   const { copied, copy } = useCopyToClipboard();
   return (
-    <div className="chat-message-assistant">
+    <div className={styles.assistantMessage}>
       <MarkdownMessage content={content} />
-      <div className="message-actions">
+      <div className={styles.messageActions}>
         <button
           type="button"
-          className="message-copy"
+          className={`${controls.button} ${styles.copyButton}`}
           onClick={() => copy(content)}
         >
           {copied ? "Copied" : "Copy"}
@@ -67,11 +68,11 @@ function AssistantMessage({ content }: { content: string }) {
 
 function TypingIndicator() {
   return (
-    <div className="chat-message-assistant" aria-label="Assistant is typing">
-      <span className="typing-indicator">
-        <span />
-        <span />
-        <span />
+    <div className={styles.assistantMessage} aria-label="Assistant is typing">
+      <span className={styles.typingIndicator}>
+        <span className={styles.typingDot} />
+        <span className={styles.typingDot} />
+        <span className={styles.typingDot} />
       </span>
     </div>
   );
@@ -267,78 +268,59 @@ export default function ChatPane({
 
   return (
     <div
-      style={{ display: "flex", flexDirection: "column", height: "100%" }}
+      className={styles.pane}
       onFocus={onFocus} // Attach the onFocus handler to the main container
       tabIndex={-1} // Ensure the div can receive focus
     >
       {/* Message Display div */}
-      <div
-        ref={messageContainerRef}
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          paddingTop: "8px",
-          paddingRight: "20px",
-          paddingBottom: "8px",
-          paddingLeft: "30px",
-        }}
-        tabIndex={-1}
-      >
-        {messages.map((m) =>
-          m.role === "user" ? (
-            <div key={m.id} className="chat-bubble chat-bubble-user">
-              {m.content}
-            </div>
-          ) : (
-            <AssistantMessage key={m.id} content={m.content} />
-          ),
-        )}
-        {pending[threadId] &&
-          (pending[threadId].content ? (
-            <div className="chat-message-assistant">
-              <MarkdownMessage content={pending[threadId].content} />
-            </div>
-          ) : (
-            <TypingIndicator />
-          ))}
+      <div ref={messageContainerRef} className={styles.messages} tabIndex={-1}>
+        <div className={styles.contentColumn}>
+          {messages.map((m) =>
+            m.role === "user" ? (
+              <div
+                key={m.id}
+                className={styles.userMessage}
+                data-message-role="user"
+              >
+                {m.content}
+              </div>
+            ) : (
+              <AssistantMessage key={m.id} content={m.content} />
+            ),
+          )}
+          {pending[threadId] &&
+            (pending[threadId].content ? (
+              <div className={styles.assistantMessage}>
+                <MarkdownMessage content={pending[threadId].content} />
+              </div>
+            ) : (
+              <TypingIndicator />
+            ))}
+        </div>
       </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          gap: "8px",
-          borderTop: "1px solid var(--color-border)",
-          paddingTop: "8px",
-          paddingRight: "18px",
-          paddingBottom: "8px",
-          paddingLeft: "18px",
-        }}
-      >
-        <textarea
-          className="chatTextArea"
-          value={inputs[threadId] || ""}
-          onChange={(e) =>
-            setInputs((prev) => ({ ...prev, [threadId]: e.target.value }))
-          }
-          placeholder="Type a message..."
-          style={{ flex: 1, resize: "none", height: "80px" }}
-        />
-        <button
-          className="major-button"
-          onClick={send}
-          disabled={(inputs[threadId]?.trim().length || 0) === 0}
-          aria-label="Send message"
-          style={{
-            alignSelf: "flex-start",
-            padding: "10px 15px",
-            fontSize: "16px",
-          }}
-        >
-          {/*▶*/}
-          <svg width="22" height="22" viewBox="0 0 16 13" fill="currentColor">
-            <path d="M4 2l10 6-10 6V2z" />
-          </svg>
-        </button>
+      <div className={styles.composer}>
+        <div className={styles.composerInner}>
+          <textarea
+            className={`${controls.field} ${styles.composerInput}`}
+            value={inputs[threadId] || ""}
+            onChange={(e) =>
+              setInputs((prev) => ({ ...prev, [threadId]: e.target.value }))
+            }
+            placeholder="Type a message..."
+          />
+          <button
+            type="button"
+            className={`${controls.button} ${controls.primary} ${styles.sendButton}`}
+            onClick={send}
+            disabled={(inputs[threadId]?.trim().length || 0) === 0}
+            aria-label="Send message"
+          >
+            {/*▶*/}
+            <svg width="22" height="22" viewBox="0 0 16 13" fill="currentColor">
+              <path d="M4 2l10 6-10 6V2z" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -6,13 +6,13 @@ import { useState, useRef } from "react";
 import { load, save } from "../lib/storage";
 import { useClickOutside } from "../lib/useClickOutside";
 import type { Thread } from "../types";
+import controls from "./Controls.module.css";
+import styles from "./SidebarList.module.css";
 
 export default function ThreadList({
   onSelect,
-  isMenuOpen,
 }: {
   onSelect: (id: string) => void;
-  isMenuOpen: boolean;
 }) {
   const [store, setStore] = useState(load());
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -76,31 +76,27 @@ export default function ThreadList({
   }
 
   return (
-    <div>
+    <section className={styles.section} aria-labelledby="threads-heading">
+      <h2 id="threads-heading" className={controls.visuallyHidden}>
+        Threads
+      </h2>
       <button
+        type="button"
         onClick={createThread}
-        className="major-button"
-        style={{ display: "block", margin: "2px auto 14px" }}
-        tabIndex={isMenuOpen ? 0 : -1}
+        className={`${controls.button} ${controls.primary} ${styles.centeredAction}`}
       >
         New thread
       </button>
-      <ul className="thread-list">
+      <ul className={styles.list}>
         {store.threads.map((t) => (
-          <li
-            key={t.id}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              position: "relative",
-              marginBottom: "8px",
-            }}
-          >
+          <li className={styles.item} key={t.id}>
             <input
-              className="threadInput"
+              className={`${controls.field} ${styles.itemInput}${
+                editingThreadId === t.id ? ` ${styles.itemInputEditing}` : ""
+              }`}
               defaultValue={t.title}
               readOnly={editingThreadId !== t.id}
+              aria-label={`Thread title: ${t.title}`}
               onClick={() => {
                 if (editingThreadId !== t.id) {
                   onSelect(t.id);
@@ -133,96 +129,39 @@ export default function ThreadList({
               ref={(e) => {
                 inputRefs.current[t.id] = e;
               }}
-              style={{
-                flex: 1,
-                cursor: editingThreadId === t.id ? "text" : "pointer",
-              }}
-              tabIndex={isMenuOpen ? 0 : -1}
             />
             <button
+              type="button"
+              className={`${controls.button} ${controls.icon} ${styles.actionsToggle}`}
               onClick={() => setOpenMenuId(openMenuId === t.id ? null : t.id)}
-              style={{
-                width: "20px",
-                height: "20px",
-                borderRadius: "var(--radius-full)",
-                border: "none",
-                background: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "18px",
-                padding: 0,
-              }}
-              tabIndex={isMenuOpen ? 0 : -1}
+              aria-label={`Actions for ${t.title}`}
+              aria-expanded={openMenuId === t.id}
+              aria-controls={`thread-actions-${t.id}`}
             >
-              <span
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  fontSize: "10px",
-                  lineHeight: "4px",
-                  transform: "translateY(0px)",
-                }}
-              >
-                <span>•</span>
-                <span>•</span>
-                <span>•</span>
-              </span>
+              <span aria-hidden="true">⋮</span>
             </button>
             {openMenuId === t.id && (
               <div
                 ref={menuRef}
-                style={{
-                  position: "absolute",
-                  right: "-20px",
-                  top: "20px",
-                  paddingLeft: "5px",
-                  background: "var(--color-surface)",
-                  border: "1px solid var(--color-border-strong)",
-                  borderRadius: "var(--radius-sm)",
-                  boxShadow: "0 2px 8px var(--color-shadow)",
-                  zIndex: 1000,
-                  minWidth: "20px",
-                  maxWidth: "55px",
-                }}
+                id={`thread-actions-${t.id}`}
+                className={styles.actionsPanel}
               >
                 <button
+                  type="button"
                   onClick={() => {
                     enterEditMode(t.id);
                   }}
-                  className="minor-button"
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    border: "none",
-                    borderRadius: 0,
-                    borderBottom: "0px solid #eee",
-                    paddingTop: "0px",
-                    paddingBottom: "4px",
-                    marginTop: "0px",
-                    marginBottom: "0px",
-                  }}
-                  tabIndex={isMenuOpen ? 0 : -1}
+                  className={`${controls.button} ${styles.actionButton}`}
                 >
                   Rename
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     deleteThread(t.id);
                     setOpenMenuId(null);
                   }}
-                  className="minor-button"
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    border: "none",
-                    borderRadius: 0,
-                    borderTop: "0px solid #ca8e17",
-                    paddingTop: "4px",
-                    margin: "0px",
-                  }}
-                  tabIndex={isMenuOpen ? 0 : -1}
+                  className={`${controls.button} ${styles.actionButton}`}
                 >
                   Delete
                 </button>
@@ -231,6 +170,6 @@ export default function ThreadList({
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }

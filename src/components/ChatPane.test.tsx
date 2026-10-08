@@ -77,7 +77,7 @@ describe("ChatPane message rendering", () => {
     render(<ChatPane threadId="t1" presetTrigger={0} />);
 
     const bubble = screen.getByText("**bold** text");
-    expect(bubble).toHaveClass("chat-bubble-user");
+    expect(bubble).toHaveAttribute("data-message-role", "user");
   });
 
   test("renders an assistant message with markdown formatting and no role label", () => {

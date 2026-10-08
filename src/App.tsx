@@ -4,145 +4,170 @@
     Layout wiring together ThreadList, PresetList, and ChatPane
 */
 
-import { useEffect, useState } from "react";
+import { type CSSProperties, useState } from "react";
 import ThreadList from "./components/ThreadList";
 import PresetList from "./components/PresetList";
 import ChatPane from "./components/ChatPane";
-import "./App.css";
+import controls from "./components/Controls.module.css";
+import styles from "./App.module.css";
+
+const DEFAULT_SIDEBAR_WIDTH = 300;
+const MIN_SIDEBAR_WIDTH = 240;
+const MAX_SIDEBAR_WIDTH = 480;
+const SIDEBAR_RESIZE_STEP = 16;
 
 export default function App() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [presetAppend, setPresetAppend] = useState<string>("");
   const [presetTrigger, setPresetTrigger] = useState(0); // Trigger for preset append
   const [isMenuOpen, setIsMenuOpen] = useState(false); // State to toggle the left pane
-  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
 
-  useEffect(() => {
-    // Check this later if it's sensible on phones
-    const updateHeight = () => setViewportHeight(window.innerHeight); // Dynamically update the height
-    window.addEventListener("resize", updateHeight);
-    return () => window.removeEventListener("resize", updateHeight);
-  }, []);
+  function clampSidebarWidth(width: number) {
+    const viewportMaximum = Math.floor(window.innerWidth * 0.45);
+    return Math.min(
+      Math.max(MIN_SIDEBAR_WIDTH, viewportMaximum),
+      MAX_SIDEBAR_WIDTH,
+      Math.max(MIN_SIDEBAR_WIDTH, width),
+    );
+  }
+
+  function resizeSidebar(width: number) {
+    setSidebarWidth(clampSidebarWidth(width));
+  }
 
   return (
     <div
-      style={{
-        height: `${viewportHeight}px`,
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
+      className={`${styles.shell}${
+        isSidebarCollapsed ? ` ${styles.shellSidebarCollapsed}` : ""
+      }${isResizingSidebar ? ` ${styles.shellResizing}` : ""}`}
+      style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}
     >
-      {/* Top strip */}
-      <div className="app-title-bar">
-        <button
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="hamburger-button"
-          aria-label="Menu button"
-          style={{
-            padding: "0px 0px",
-            cursor: "pointer",
-          }}
-        >
-          <span className="hamburger-bar"></span>
-        </button>
-        <div className="app-title">PromptGPT</div>
-        <div style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
-          v0.26.0814
-        </div>
-      </div>
-
-      {/* Bottom pane */}
-      <div
-        style={{
-          flex: 1,
-          display: "grid",
-          gridTemplateColumns: "1fr",
-          overflow: "hidden",
-        }}
+      <button
+        type="button"
+        className={`${controls.button} ${controls.icon} ${styles.mobileMenuButton}`}
+        onClick={() => setIsMenuOpen(!isMenuOpen)}
+        aria-label="Open menu"
+        aria-expanded={isMenuOpen}
+        aria-controls="app-sidebar"
       >
-        {/* Left pane: ThreadList and PresetList */}
-        <div
-          className="left-pane"
-          style={{
-            boxSizing: "border-box",
-            position: "absolute",
-            top: 0,
-            left: isMenuOpen ? 0 : "-296px", // Slide in/out based on `isMenuOpen`
-            width: "300px",
-            height: "100%",
-            borderRight: "1px solid var(--color-border)",
-            display: "grid",
-            gridTemplateRows: "1fr 1fr",
-            padding: "22px 28px",
-            overflowY: "auto",
-            transition: "left 0.3s ease", // Smooth sliding animation
-            zIndex: 999, // Ensure it overlaps the chat pane
-          }}
-          tabIndex={-1}
-        >
-          {/* Close button */}
-          <button
-            onClick={() => setIsMenuOpen(false)}
-            className="close-button"
-            aria-label="Close menu button"
-            style={{
-              position: "absolute",
-              top: "2px",
-              left: "15px",
-              zIndex: 1001, // Ensure it appears above the left pane
-            }}
-            tabIndex={isMenuOpen ? 0 : -1}
-          >
-            &times;
-          </button>
+        <span className={styles.menuIcon} aria-hidden="true">
+          <span className={styles.menuIconLine} />
+        </span>
+      </button>
 
-          <ThreadList
-            onSelect={(id) => setThreadId(id)}
-            isMenuOpen={isMenuOpen}
-          />
-          <PresetList
-            onAppend={(text) => {
-              setPresetTrigger((prev) => prev + 1); // Increment trigger
-              setPresetAppend(text);
-            }}
-            isMenuOpen={isMenuOpen}
-          />
-        </div>
+      <button
+        type="button"
+        className={`${controls.button} ${controls.icon} ${styles.desktopExpandButton}${
+          isSidebarCollapsed ? ` ${styles.desktopExpandButtonVisible}` : ""
+        }`}
+        onClick={() => setIsSidebarCollapsed(false)}
+        aria-label="Expand sidebar"
+        aria-controls="app-sidebar"
+        aria-expanded={!isSidebarCollapsed}
+      >
+        <span className={styles.menuIcon} aria-hidden="true">
+          <span className={styles.menuIconLine} />
+        </span>
+      </button>
 
-        {/* Right pane */}
-        <div
-          style={{
-            height: "100%",
-            width: "100%",
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
-            backgroundColor: "var(--color-surface)",
-          }}
+      {isMenuOpen && (
+        <button
+          type="button"
+          className={styles.backdrop}
+          onClick={() => setIsMenuOpen(false)}
+          aria-label="Close menu"
+        />
+      )}
+
+      <aside
+        id="app-sidebar"
+        className={`${styles.sidebar}${isMenuOpen ? ` ${styles.sidebarOpen}` : ""}`}
+        aria-label="Threads and prompt presets"
+      >
+        <button
+          type="button"
+          className={`${controls.button} ${controls.icon} ${styles.sidebarCollapse}`}
+          onClick={() => setIsSidebarCollapsed(true)}
+          aria-label="Collapse sidebar"
+          aria-controls="app-sidebar"
+          aria-expanded={!isSidebarCollapsed}
         >
-          {threadId ? (
-            <ChatPane
-              threadId={threadId}
-              presetAppend={presetAppend}
-              presetTrigger={presetTrigger} // Pass the trigger
-              onFocus={() => setIsMenuOpen(false)} // Collapse the left pane when ChatPane gains focus
-            />
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                height: "100%",
-                width: "100%",
-              }}
-            >
-              Select or create a thread
-            </div>
-          )}
-        </div>
-      </div>
+          <span aria-hidden="true">‹</span>
+        </button>
+
+        <button
+          type="button"
+          className={`${controls.button} ${controls.icon} ${styles.sidebarClose}`}
+          onClick={() => setIsMenuOpen(false)}
+          aria-label="Close menu"
+        >
+          &times;
+        </button>
+
+        <ThreadList onSelect={(id) => setThreadId(id)} />
+        <PresetList
+          onAppend={(text) => {
+            setPresetTrigger((prev) => prev + 1); // Increment trigger
+            setPresetAppend(text);
+          }}
+        />
+
+        <div
+          className={styles.sidebarResizeHandle}
+          role="separator"
+          aria-label="Resize sidebar"
+          aria-orientation="vertical"
+          aria-valuemin={MIN_SIDEBAR_WIDTH}
+          aria-valuemax={clampSidebarWidth(MAX_SIDEBAR_WIDTH)}
+          aria-valuenow={sidebarWidth}
+          tabIndex={0}
+          onPointerDown={(event) => {
+            if (event.button !== 0) return;
+            event.currentTarget.setPointerCapture(event.pointerId);
+            setIsResizingSidebar(true);
+          }}
+          onPointerMove={(event) => {
+            if (isResizingSidebar) resizeSidebar(event.clientX);
+          }}
+          onPointerUp={(event) => {
+            if (!isResizingSidebar) return;
+            event.currentTarget.releasePointerCapture(event.pointerId);
+            setIsResizingSidebar(false);
+          }}
+          onPointerCancel={() => setIsResizingSidebar(false)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft") {
+              event.preventDefault();
+              resizeSidebar(sidebarWidth - SIDEBAR_RESIZE_STEP);
+            } else if (event.key === "ArrowRight") {
+              event.preventDefault();
+              resizeSidebar(sidebarWidth + SIDEBAR_RESIZE_STEP);
+            } else if (event.key === "Home") {
+              event.preventDefault();
+              resizeSidebar(MIN_SIDEBAR_WIDTH);
+            } else if (event.key === "End") {
+              event.preventDefault();
+              resizeSidebar(MAX_SIDEBAR_WIDTH);
+            }
+          }}
+        />
+      </aside>
+
+      <main className={styles.main}>
+        {threadId ? (
+          <ChatPane
+            threadId={threadId}
+            presetAppend={presetAppend}
+            presetTrigger={presetTrigger} // Pass the trigger
+            onFocus={() => setIsMenuOpen(false)} // Collapse the left pane when ChatPane gains focus
+          />
+        ) : (
+          <div className={styles.emptyState}>Select or create a thread</div>
+        )}
+      </main>
     </div>
   );
 }

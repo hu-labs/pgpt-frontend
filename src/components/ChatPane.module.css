@@ -1,0 +1,140 @@
+.pane {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.messages {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-3) var(--space-6);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.contentColumn,
+.composerInner {
+  width: min(100%, 50rem);
+  margin-inline: auto;
+}
+
+.userMessage {
+  width: fit-content;
+  max-width: min(75%, 46rem);
+  margin-inline-start: auto;
+  margin-block-end: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--color-bubble-user-bg);
+  color: var(--color-bubble-user-text);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.assistantMessage {
+  width: 100%;
+  min-width: 0;
+  margin-block-end: var(--space-3);
+}
+
+.messageActions {
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.assistantMessage:hover .messageActions,
+.assistantMessage:focus-within .messageActions {
+  opacity: 1;
+}
+
+.copyButton {
+  padding: var(--space-1);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.copyButton:hover {
+  color: var(--color-accent);
+}
+
+.typingIndicator {
+  display: inline-flex;
+  gap: var(--space-1);
+  padding-block: var(--space-1);
+}
+
+.typingDot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-typing-dot);
+  animation: typing-bounce 1.2s infinite ease-in-out both;
+}
+
+.typingDot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typingDot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.composer {
+  padding: var(--space-2) var(--space-4);
+  border-block-start: 1px solid var(--color-border);
+}
+
+.composerInner {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.composerInput {
+  flex: 1;
+  height: 5rem;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  resize: none;
+}
+
+.sendButton {
+  align-self: flex-start;
+  padding: var(--space-3) var(--space-4);
+  font-size: 1rem;
+}
+
+@keyframes typing-bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 47.999rem) {
+  .messages {
+    padding: calc(var(--control-size) + var(--space-6)) var(--space-4)
+      var(--space-3);
+  }
+
+  .userMessage {
+    max-width: 85%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typingDot {
+    animation: none;
+  }
+}
