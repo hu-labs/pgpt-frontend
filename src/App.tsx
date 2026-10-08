@@ -5,6 +5,7 @@
 */
 
 import { type CSSProperties, useState } from "react";
+import { useStore } from "./lib/storage";
 import ThreadList from "./components/ThreadList";
 import PresetList from "./components/PresetList";
 import ChatPane from "./components/ChatPane";
@@ -17,13 +18,21 @@ const MAX_SIDEBAR_WIDTH = 480;
 const SIDEBAR_RESIZE_STEP = 16;
 
 export default function App() {
-  const [threadId, setThreadId] = useState<string | null>(null);
+  const [store] = useStore();
+  const [selectedThreadId, setThreadId] = useState<string | null>(null);
   const [presetAppend, setPresetAppend] = useState<string>("");
   const [presetTrigger, setPresetTrigger] = useState(0); // Trigger for preset append
   const [isMenuOpen, setIsMenuOpen] = useState(false); // State to toggle the left pane
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+
+  // A deleted selection must immediately fall back to the unloaded state.
+  const threadId = store.threads.some(
+    (thread) => thread.id === selectedThreadId,
+  )
+    ? selectedThreadId
+    : null;
 
   function clampSidebarWidth(width: number) {
     const viewportMaximum = Math.floor(window.innerWidth * 0.45);
@@ -107,7 +116,12 @@ export default function App() {
           &times;
         </button>
 
-        <ThreadList onSelect={(id) => setThreadId(id)} />
+        <ThreadList
+          onSelect={setThreadId}
+          onDelete={(id) => {
+            setThreadId((selected) => (selected === id ? null : selected));
+          }}
+        />
         <PresetList
           onAppend={(text) => {
             setPresetTrigger((prev) => prev + 1); // Increment trigger
@@ -157,14 +171,14 @@ export default function App() {
       </aside>
 
       <main className={styles.main}>
-        {threadId ? (
-          <ChatPane
-            threadId={threadId}
-            presetAppend={presetAppend}
-            presetTrigger={presetTrigger} // Pass the trigger
-            onFocus={() => setIsMenuOpen(false)} // Collapse the left pane when ChatPane gains focus
-          />
-        ) : (
+        {/* Keep request tracking mounted so replies for other threads can finish. */}
+        <ChatPane
+          threadId={threadId}
+          presetAppend={presetAppend}
+          presetTrigger={presetTrigger}
+          onFocus={() => setIsMenuOpen(false)} // Collapse the left pane when ChatPane gains focus
+        />
+        {!threadId && (
           <div className={styles.emptyState}>Select or create a thread</div>
         )}
       </main>

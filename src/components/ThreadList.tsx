@@ -3,7 +3,7 @@
 */
 
 import { useState, useRef } from "react";
-import { load, save } from "../lib/storage";
+import { useStore } from "../lib/storage";
 import { useClickOutside } from "../lib/useClickOutside";
 import type { Thread } from "../types";
 import controls from "./Controls.module.css";
@@ -11,10 +11,12 @@ import styles from "./SidebarList.module.css";
 
 export default function ThreadList({
   onSelect,
+  onDelete,
 }: {
   onSelect: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
-  const [store, setStore] = useState(load());
+  const [store, setStore] = useStore();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -29,9 +31,7 @@ export default function ThreadList({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    const next = { ...store, threads: [t, ...store.threads] };
-    setStore(next);
-    save(next);
+    setStore((prev) => ({ ...prev, threads: [t, ...prev.threads] }));
     onSelect(t.id);
 
     // Focus the input field for the new thread
@@ -49,7 +49,6 @@ export default function ThreadList({
           t.id === id ? { ...t, title, updatedAt: Date.now() } : t,
         ),
       };
-      save(next);
       return next;
     });
     setEditingThreadId(null);
@@ -68,11 +67,13 @@ export default function ThreadList({
   }
 
   function deleteThread(id: string) {
-    const nextThreads = store.threads.filter((t) => t.id !== id);
-    const nextMessages = store.messages.filter((m) => m.threadId !== id);
-    const next = { ...store, threads: nextThreads, messages: nextMessages };
-    setStore(next);
-    save(next);
+    // Delete the thread and its messages together; global presets stay untouched.
+    setStore((prev) => ({
+      ...prev,
+      threads: prev.threads.filter((t) => t.id !== id),
+      messages: prev.messages.filter((m) => m.threadId !== id),
+    }));
+    onDelete?.(id);
   }
 
   return (

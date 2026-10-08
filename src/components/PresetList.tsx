@@ -3,7 +3,7 @@
 */
 
 import { useState, useRef } from "react";
-import { load, save } from "../lib/storage";
+import { useStore } from "../lib/storage";
 import { useClickOutside } from "../lib/useClickOutside";
 import type { Preset } from "../types";
 import controls from "./Controls.module.css";
@@ -14,7 +14,7 @@ export default function PresetList({
 }: {
   onAppend: (text: string) => void;
 }) {
-  const [store, setStore] = useState(load());
+  const [store, setStore] = useStore();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -32,22 +32,18 @@ export default function PresetList({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    const next = { ...store, presets: [p, ...store.presets] };
-    setStore(next);
-    save(next);
+    setStore((prev) => ({ ...prev, presets: [p, ...prev.presets] }));
     setTitle("");
     setText("");
   }
 
   function updatePreset(id: string, patch: Partial<Preset>) {
-    const next = {
-      ...store,
-      presets: store.presets.map((p) =>
+    setStore((prev) => ({
+      ...prev,
+      presets: prev.presets.map((p) =>
         p.id === id ? { ...p, ...patch, updatedAt: Date.now() } : p,
       ),
-    };
-    setStore(next);
-    save(next);
+    }));
     setEditingPresetId(null);
   }
 
@@ -64,12 +60,10 @@ export default function PresetList({
   }
 
   function deletePreset(id: string) {
-    const next = {
-      ...store,
-      presets: store.presets.filter((p) => p.id !== id),
-    };
-    setStore(next);
-    save(next);
+    setStore((prev) => ({
+      ...prev,
+      presets: prev.presets.filter((p) => p.id !== id),
+    }));
   }
 
   return (
