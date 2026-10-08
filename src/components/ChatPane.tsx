@@ -198,8 +198,10 @@ export default function ChatPane({
         headers: {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
-          // Local DEBUG version will require the key.
-          //"X-Api-Key": import.meta.env.VITE_API_KEY,
+          // Insert key if in local debug mode
+          ...(import.meta.env.DEV && import.meta.env.VITE_API_KEY
+            ? { "X-Api-Key": import.meta.env.VITE_API_KEY }
+            : {}),
         },
         body: JSON.stringify({ threadId, messages: threadMessages }),
       });
