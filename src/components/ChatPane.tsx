@@ -2,13 +2,20 @@
     messages display, composer, send
 */
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import { getStore, subscribeStore, useStore } from "../lib/storage";
 import { useCopyToClipboard } from "../lib/useCopyToClipboard";
 import { fetchAuthSession } from "aws-amplify/auth";
 
 import type { Message } from "../types";
-import MarkdownMessage from "./MarkdownMessage";
+
 import controls from "./Controls.module.css";
 import styles from "./ChatPane.module.css";
 
@@ -50,11 +57,24 @@ async function* readSseEvents(body: ReadableStream<Uint8Array>) {
   }
 }
 
+// Fetch Markdown parsing and syntax highlighting only when an assistant reply is shown.
+const MarkdownMessage = lazy(() => import("./MarkdownMessage"));
+
+function RenderedMarkdown({ content }: { content: string }) {
+  return (
+    <Suspense
+      fallback={<div style={{ whiteSpace: "pre-wrap" }}>{content}</div>}
+    >
+      <MarkdownMessage content={content} />
+    </Suspense>
+  );
+}
+
 function AssistantMessage({ content }: { content: string }) {
   const { copied, copy } = useCopyToClipboard();
   return (
     <div className={styles.assistantMessage}>
-      <MarkdownMessage content={content} />
+      <RenderedMarkdown content={content} />
       <div className={styles.messageActions}>
         <button
           type="button"
@@ -355,7 +375,7 @@ export default function ChatPane({
           {pending[threadId] &&
             (pending[threadId].content ? (
               <div className={styles.assistantMessage}>
-                <MarkdownMessage content={pending[threadId].content} />
+                <RenderedMarkdown content={pending[threadId].content} />
               </div>
             ) : (
               <TypingIndicator />
