@@ -2,9 +2,13 @@
 
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+//import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    //visualizer({ open: true }), // visual chart
+  ],
   base: "./",
   build: {
     sourcemap: true,

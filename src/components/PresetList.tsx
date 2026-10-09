@@ -3,7 +3,7 @@
 */
 
 import { useState, useRef } from "react";
-import { useStore } from "../lib/storage";
+import { useStore, useStorageUser } from "../lib/storage";
 import { useClickOutside } from "../lib/useClickOutside";
 import type { Preset } from "../types";
 import controls from "./Controls.module.css";
@@ -15,6 +15,7 @@ export default function PresetList({
   onAppend: (text: string) => void;
 }) {
   const [store, setStore] = useStore();
+  const userId = useStorageUser();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -98,6 +99,7 @@ export default function PresetList({
         <button
           type="button"
           onClick={createPreset}
+          disabled={!userId}
           className={`${controls.button} ${controls.primary} ${styles.centeredAction}`}
         >
           Add preset

@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { fetchAuthSession } from "aws-amplify/auth";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { load, save } from "../lib/storage";
 import type { Message } from "../types";
@@ -55,7 +56,20 @@ function createControllableSseBody() {
 
 const originalFetch = globalThis.fetch;
 
+// Request tests use a deterministic session instead of real Cognito credentials.
+vi.mock("aws-amplify/auth", async (importOriginal) => {
+  const original = await importOriginal<typeof import("aws-amplify/auth")>();
+  return { ...original, fetchAuthSession: vi.fn() };
+});
+
+const authenticatedSession = {
+  tokens: { idToken: { toString: () => "test-id-token" } },
+} as Awaited<ReturnType<typeof fetchAuthSession>>;
+
 beforeEach(() => {
+  vi.mocked(fetchAuthSession)
+    .mockReset()
+    .mockResolvedValue(authenticatedSession);
   localStorage.clear();
   seedMessages([]);
   Object.defineProperty(navigator, "clipboard", {
@@ -205,4 +219,118 @@ describe("ChatPane streaming replies", () => {
       ).toContain("⚠️ Response interrupted"),
     );
   });
+});
+
+describe("ChatPane authentication", () => {
+  test("sends the ID token and includes the current user message in the request", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          'event: delta\ndata: {"content":"Answer"}\n\nevent: done\ndata: {}\n\n',
+        ),
+      );
+    globalThis.fetch = fetchMock;
+    render(<ChatPane threadId="t1" presetTrigger={0} />);
+    await user.type(
+      screen.getByPlaceholderText("Type a message..."),
+      "Current question",
+    );
+    await user.click(screen.getByRole("button", { name: "Send message" }));
+    await screen.findByText("Answer");
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(new Headers(init.headers).get("Authorization")).toBe(
+      "Bearer test-id-token",
+    );
+    expect(JSON.parse(init.body as string).messages).toEqual([
+      { role: "user", content: "Current question" },
+    ]);
+    expect(load().messages.map((message) => message.role)).toEqual([
+      "user",
+      "assistant",
+    ]);
+  });
+
+  test.each(["missing token", "session rejection"])(
+    "cleans up after %s and permits a successful retry",
+    async (failure) => {
+      const sessionMock = vi.mocked(fetchAuthSession);
+      if (failure === "missing token") sessionMock.mockResolvedValueOnce({});
+      else sessionMock.mockRejectedValueOnce(new Error("Session unavailable"));
+      const user = userEvent.setup();
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            'event: delta\ndata: {"content":"Retry answer"}\n\nevent: done\ndata: {}\n\n',
+          ),
+        );
+      globalThis.fetch = fetchMock;
+      render(<ChatPane threadId="t1" presetTrigger={0} />);
+      await user.type(
+        screen.getByPlaceholderText("Type a message..."),
+        "First attempt",
+      );
+      await user.click(screen.getByRole("button", { name: "Send message" }));
+      await screen.findByText(
+        failure === "missing token"
+          ? "⚠️ Error: Please log in before sending a message."
+          : "⚠️ Error: Could not verify your login session. Please log in again and retry.",
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(
+        screen.queryByLabelText("Assistant is typing"),
+      ).not.toBeInTheDocument();
+      await user.type(
+        screen.getByPlaceholderText("Type a message..."),
+        "Retry",
+      );
+      expect(
+        screen.getByRole("button", { name: "Send message" }),
+      ).toBeEnabled();
+      await user.click(screen.getByRole("button", { name: "Send message" }));
+      await screen.findByText("Retry answer");
+      expect(fetchMock).toHaveBeenCalledOnce();
+    },
+  );
+
+  test.each(["resolve", "reject"])(
+    "does not request or restore a deleted thread when session lookup later %ss",
+    async (outcome) => {
+      let resolve!: (
+        session: Awaited<ReturnType<typeof fetchAuthSession>>,
+      ) => void;
+      let reject!: (error: Error) => void;
+      vi.mocked(fetchAuthSession).mockReturnValueOnce(
+        new Promise((done, fail) => {
+          resolve = done;
+          reject = fail;
+        }),
+      );
+      const user = userEvent.setup();
+      const fetchMock = vi.fn();
+      globalThis.fetch = fetchMock;
+      render(<ChatPane threadId="t1" presetTrigger={0} />);
+      await user.type(
+        screen.getByPlaceholderText("Type a message..."),
+        "Question",
+      );
+      await user.click(screen.getByRole("button", { name: "Send message" }));
+      expect(screen.getByLabelText("Assistant is typing")).toBeInTheDocument();
+      await act(async () => {
+        save({ threads: [], messages: [], presets: [] });
+      });
+      await act(async () => {
+        if (outcome === "resolve") resolve(authenticatedSession);
+        else reject(new Error("Session unavailable"));
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(load().messages).toEqual([]);
+      expect(load().threads).toEqual([]);
+      expect(
+        screen.queryByLabelText("Assistant is typing"),
+      ).not.toBeInTheDocument();
+    },
+  );
 });
