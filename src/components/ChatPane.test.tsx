@@ -99,7 +99,7 @@ describe("ChatPane message rendering", () => {
     expect(bubble).toHaveAttribute("data-message-role", "user");
   });
 
-  test("renders an assistant message with markdown formatting and no role label", () => {
+  test("renders an assistant message with markdown formatting and no role label", async () => {
     seedMessages([
       {
         id: "2",
@@ -112,7 +112,7 @@ describe("ChatPane message rendering", () => {
     render(<ChatPane threadId="t1" presetTrigger={0} />);
 
     expect(screen.queryByText(/assistant:/i)).not.toBeInTheDocument();
-    expect(screen.getByText("bold").tagName).toBe("STRONG");
+    expect((await screen.findByText("bold")).tagName).toBe("STRONG");
   });
 
   test("copy action on an assistant message copies the raw markdown content", async () => {
