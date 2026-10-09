@@ -23,10 +23,9 @@ AGENTS.md
 
 # My own docs
 docs/
+_old/
 coverage/
 TODO.txt
 TODO.md
 .env
 stats.html
-
-_old/

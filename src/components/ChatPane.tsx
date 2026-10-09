@@ -5,6 +5,8 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { getStore, subscribeStore, useStore } from "../lib/storage";
 import { useCopyToClipboard } from "../lib/useCopyToClipboard";
+import { fetchAuthSession } from "aws-amplify/auth";
+
 import type { Message } from "../types";
 import MarkdownMessage from "./MarkdownMessage";
 import controls from "./Controls.module.css";
@@ -212,6 +214,15 @@ export default function ChatPane({
       [threadId]: { content: "", status: "waiting" },
     }));
 
+    // Cognito: get ID token for backend auth
+    const session = await fetchAuthSession();
+    const idToken = session.tokens?.idToken?.toString();
+    if (!idToken) {
+      // Not logged in
+      return;
+    }
+
+    // Request to the backend
     let response: Response;
     try {
       // fetch() from the backend
@@ -221,6 +232,7 @@ export default function ChatPane({
         headers: {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
+          Authorization: `Bearer ${idToken}`, // Cognito Auth
           // Insert key if in local debug mode
           ...(import.meta.env.DEV && import.meta.env.VITE_API_KEY
             ? { "X-Api-Key": import.meta.env.VITE_API_KEY }
@@ -258,7 +270,7 @@ export default function ChatPane({
       return;
     }
 
-    // Stream the reply in as it arrives; only commit it to the store once finished.
+    // Stream the reply in as it arrives. Only commit it to the store once finished.
     let finalContent = "";
     let terminated = false; // true once a "done" or "error" event is seen
     try {
