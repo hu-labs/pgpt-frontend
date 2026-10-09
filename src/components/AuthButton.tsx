@@ -6,6 +6,7 @@ import {
   type AuthUser,
 } from "aws-amplify/auth";
 import { Hub } from "aws-amplify/utils";
+import { setStorageUser } from "../lib/storage";
 import controls from "./Controls.module.css";
 import styles from "./AuthButton.module.css";
 
@@ -29,6 +30,7 @@ export default function AuthButton() {
       }
       // A late session check must not undo a newer sign-out or update after unmount.
       if (active && currentRevision === revision) {
+        setStorageUser(currentUser?.userId ?? null);
         setUser(currentUser);
         setIsLoading(false);
       }
@@ -37,13 +39,19 @@ export default function AuthButton() {
     const unsubscribe = Hub.listen("auth", ({ payload }) => {
       switch (payload.event) {
         case "signedIn":
+          setStorageUser(null);
+          setError(null);
+          void refreshUser();
+          break;
         case "signInWithRedirect":
         case "tokenRefresh":
           setError(null);
           void refreshUser();
           break;
+        case "tokenRefresh_failure":
         case "signedOut":
           revision++;
+          setStorageUser(null);
           setUser(null);
           setIsLoading(false);
           setIsBusy(false);
@@ -70,6 +78,7 @@ export default function AuthButton() {
     try {
       if (user) {
         await signOut();
+        setStorageUser(null);
         setUser(null);
       } else {
         // Amplify builds the authorization URL and manages PKCE and the callback.

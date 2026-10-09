@@ -214,11 +214,31 @@ export default function ChatPane({
       [threadId]: { content: "", status: "waiting" },
     }));
 
-    // Cognito: get ID token for backend auth
-    const session = await fetchAuthSession();
-    const idToken = session.tokens?.idToken?.toString();
+    let idToken: string | undefined;
+    // Try-catch session lookup failure.
+    try {
+      // Cognito: get ID token.
+      const session = await fetchAuthSession();
+      idToken = session.tokens?.idToken?.toString();
+    } catch {
+      if (cancelled()) return;
+      clearPending();
+      addMessage(
+        "assistant",
+        "⚠️ Error: Could not verify your login session. Please log in again and retry.",
+      );
+      return;
+    }
+
+    // Deletion or unmount may have happened while session lookup was pending.
+    if (cancelled()) return;
     if (!idToken) {
-      // Not logged in
+      // i.e. user is not logged in
+      clearPending();
+      addMessage(
+        "assistant",
+        "⚠️ Error: Please log in before sending a message.",
+      );
       return;
     }
 

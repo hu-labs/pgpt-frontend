@@ -5,7 +5,7 @@
 */
 
 import { type CSSProperties, useState } from "react";
-import { useStore } from "./lib/storage";
+import { useStore, useStorageUser } from "./lib/storage";
 import ThreadList from "./components/ThreadList";
 import PresetList from "./components/PresetList";
 import ChatPane from "./components/ChatPane";
@@ -19,6 +19,12 @@ const MAX_SIDEBAR_WIDTH = 480;
 const SIDEBAR_RESIZE_STEP = 16;
 
 export default function App() {
+  const userId = useStorageUser();
+  // Account changes reset selection, drafts, and requests, including reused thread IDs.
+  return <Workspace key={userId ?? "logged-out"} />;
+}
+
+function Workspace() {
   const [store] = useStore();
   const [selectedThreadId, setThreadId] = useState<string | null>(null);
   const [presetAppend, setPresetAppend] = useState<string>("");

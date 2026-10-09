@@ -3,7 +3,7 @@
 */
 
 import { useState, useRef } from "react";
-import { useStore } from "../lib/storage";
+import { useStore, useStorageUser } from "../lib/storage";
 import { useClickOutside } from "../lib/useClickOutside";
 import type { Thread } from "../types";
 import controls from "./Controls.module.css";
@@ -17,6 +17,7 @@ export default function ThreadList({
   onDelete?: (id: string) => void;
 }) {
   const [store, setStore] = useStore();
+  const userId = useStorageUser();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -83,6 +84,7 @@ export default function ThreadList({
       <button
         type="button"
         onClick={createThread}
+        disabled={!userId}
         className={`${controls.button} ${controls.primary} ${styles.centeredAction}`}
       >
         New thread

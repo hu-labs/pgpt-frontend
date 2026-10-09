@@ -1,10 +1,36 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { fetchAuthSession, getCurrentUser } from "aws-amplify/auth";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import App from "./App";
-import { load, save } from "./lib/storage";
+import { load, save, setStorageUser } from "./lib/storage";
 
-beforeEach(() => localStorage.clear());
+// Request tests use a deterministic session instead of real Cognito credentials.
+vi.mock("aws-amplify/auth", async (importOriginal) => {
+  const original = await importOriginal<typeof import("aws-amplify/auth")>();
+  return {
+    ...original,
+    fetchAuthSession: vi.fn(),
+    getCurrentUser: vi
+      .fn()
+      .mockResolvedValue({ userId: "test-user", username: "Test user" }),
+  };
+});
+
+const authenticatedSession = {
+  tokens: { idToken: { toString: () => "test-id-token" } },
+} as Awaited<ReturnType<typeof fetchAuthSession>>;
+
+beforeEach(() => {
+  localStorage.clear();
+  vi.mocked(getCurrentUser).mockResolvedValue({
+    userId: "test-user",
+    username: "Test user",
+  });
+  vi.mocked(fetchAuthSession)
+    .mockReset()
+    .mockResolvedValue(authenticatedSession);
+});
 
 describe("responsive navigation", () => {
   test("opens and closes the mobile drawer disclosure", async () => {
@@ -247,4 +273,56 @@ describe("thread deletion", () => {
     expect(load().threads.map((thread) => thread.id)).toEqual(["Second"]);
     expect(screen.getByText("Select or create a thread")).toBeInTheDocument();
   });
+});
+
+test("account switching aborts old requests and resets selection and drafts even with reused thread IDs", async () => {
+  seedThreads();
+  const aliceData = load();
+  const user = userEvent.setup();
+  const fetchMock = vi.fn().mockImplementation(() => new Promise(() => {}));
+  vi.stubGlobal("fetch", fetchMock);
+  render(<App />);
+  await user.click(screen.getByLabelText("Thread title: First"));
+  await user.type(
+    screen.getByPlaceholderText("Type a message..."),
+    "Alice question",
+  );
+  await user.click(screen.getByRole("button", { name: "Send message" }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+  await user.type(
+    screen.getByPlaceholderText("Type a message..."),
+    "Alice draft",
+  );
+
+  vi.mocked(getCurrentUser).mockResolvedValue({
+    userId: "bob",
+    username: "Bob",
+  });
+  await act(async () => {
+    setStorageUser("bob");
+    save({
+      ...aliceData,
+      messages: [],
+      presets: [],
+      threads: [{ ...aliceData.threads[0], title: "Bob thread" }],
+    });
+  });
+  expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
+  expect(screen.getByText("Select or create a thread")).toBeInTheDocument();
+  expect(screen.queryByText("Old message")).not.toBeInTheDocument();
+  expect(
+    screen.queryByLabelText("Preset title: Global preset"),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByLabelText("Thread title: Bob thread"));
+  expect(screen.getByPlaceholderText("Type a message...")).toHaveValue("");
+  expect(load().messages).toEqual([]);
+
+  vi.mocked(getCurrentUser).mockRejectedValue(new Error("Signed out"));
+  await act(async () => setStorageUser(null));
+  expect(screen.getByText("Select or create a thread")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "New thread" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Add preset" })).toBeDisabled();
+  expect(
+    screen.queryByLabelText("Thread title: Bob thread"),
+  ).not.toBeInTheDocument();
 });
