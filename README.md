@@ -7,7 +7,6 @@ Coupled with a serverless REST API, from pgpt-backend-lambda repo.
 ## Technologies
 
 - **CI/CD** GitHub Actions for AWS S3
-- **OpenAI API** for the response in the backend
-- **Vite**, **React**, **TypeScript**
-- **Jest**
-- **ESLint**, **Prettier**
+- **Vite**, **React**, **TypeScript** for the frontend
+- **Vitest** for testing
+- **ESLint**, **Prettier** for code quality
