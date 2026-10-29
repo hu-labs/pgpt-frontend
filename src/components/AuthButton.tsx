@@ -63,6 +63,7 @@ export default function AuthButton() {
           break;
       }
     });
+
     void refreshUser();
 
     return () => {

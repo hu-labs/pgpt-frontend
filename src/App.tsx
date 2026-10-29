@@ -4,8 +4,9 @@
     Layout wiring together ThreadList, PresetList, and ChatPane
 */
 
-import { type CSSProperties, useState } from "react";
-import { useStore, useStorageUser } from "./lib/storage";
+import { type CSSProperties, useEffect, useState } from "react";
+import { useStorageUser } from "./lib/storage";
+import { useConversations } from "./lib/useConversations";
 import ThreadList from "./components/ThreadList";
 import PresetList from "./components/PresetList";
 import ChatPane from "./components/ChatPane";
@@ -20,13 +21,20 @@ const SIDEBAR_RESIZE_STEP = 16;
 
 export default function App() {
   const userId = useStorageUser();
+
   // Account changes reset selection, drafts, and requests, including reused thread IDs.
   return <Workspace key={userId ?? "logged-out"} />;
 }
 
 function Workspace() {
-  const [store] = useStore();
+  const userId = useStorageUser();
+  const conversations = useConversations(Boolean(userId));
+  const { loadMessages } = conversations;
   const [selectedThreadId, setThreadId] = useState<string | null>(null);
+  const [activeThreadIds, setActiveThreadIds] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+
   const [presetAppend, setPresetAppend] = useState<string>("");
   const [presetTrigger, setPresetTrigger] = useState(0); // Trigger for preset append
   const [isMenuOpen, setIsMenuOpen] = useState(false); // State to toggle the left pane
@@ -35,14 +43,19 @@ function Workspace() {
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
 
   // A deleted selection must immediately fall back to the unloaded state.
-  const threadId = store.threads.some(
-    (thread) => thread.id === selectedThreadId,
+  const threadId = conversations.threads.some(
+    (thread) => thread.threadId === selectedThreadId,
   )
     ? selectedThreadId
     : null;
 
+  useEffect(() => {
+    if (threadId) void loadMessages(threadId).catch(() => {});
+  }, [loadMessages, threadId]);
+
   function clampSidebarWidth(width: number) {
     const viewportMaximum = Math.floor(window.innerWidth * 0.45);
+
     return Math.min(
       Math.max(MIN_SIDEBAR_WIDTH, viewportMaximum),
       MAX_SIDEBAR_WIDTH,
@@ -124,12 +137,25 @@ function Workspace() {
         </button>
 
         <ThreadList
+          threads={conversations.threads}
           onSelect={setThreadId}
-          onDelete={(id) => {
+          onCreate={conversations.createThread}
+          onRename={conversations.renameThread}
+          onDelete={async (id) => {
+            await conversations.deleteThread(id);
             setThreadId((selected) => (selected === id ? null : selected));
           }}
+          activeThreadIds={activeThreadIds}
+          isLoading={conversations.loadingThreads}
+          disabled={!userId}
         />
         <PresetList
+          presets={conversations.presets}
+          onCreate={conversations.createPreset}
+          onUpdate={conversations.updatePreset}
+          onDelete={conversations.deletePreset}
+          isLoading={conversations.loadingPresets}
+          disabled={!userId}
           onAppend={(text) => {
             setPresetTrigger((prev) => prev + 1); // Increment trigger
             setPresetAppend(text);
@@ -182,9 +208,42 @@ function Workspace() {
       </aside>
 
       <main className={styles.main}>
+        {conversations.error && (
+          <div className={styles.errorBanner} role="alert">
+            <span>{conversations.error}</span>
+            <button
+              type="button"
+              className={`${controls.button} ${styles.errorDismiss}`}
+              onClick={conversations.clearError}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         {/* Keep request tracking mounted so replies for other threads can finish. */}
         <ChatPane
           threadId={threadId}
+          threadIds={conversations.threads.map((thread) => thread.threadId)}
+          messages={
+            threadId ? conversations.messagesByThread[threadId] : undefined
+          }
+          isLoadingMessages={
+            threadId ? conversations.loadingMessages[threadId] : false
+          }
+          onRefreshMessages={conversations.refreshMessages}
+          onRefreshThreads={conversations.refreshThreads}
+          onEditMessage={conversations.editMessage}
+          onDeleteMessage={conversations.deleteMessage}
+          onError={conversations.reportError}
+          onActiveChange={(id, isActive) => {
+            setActiveThreadIds((previous) => {
+              const next = new Set(previous);
+              if (isActive) next.add(id);
+              else next.delete(id);
+
+              return next;
+            });
+          }}
           presetAppend={presetAppend}
           presetTrigger={presetTrigger}
           onFocus={() => setIsMenuOpen(false)} // Collapse the left pane when ChatPane gains focus

@@ -21,44 +21,113 @@
   margin-inline: auto;
 }
 
-.userMessage {
+.userMessageBlock {
   width: fit-content;
   max-width: min(75%, 46rem);
   margin-inline-start: auto;
   margin-block-end: var(--space-3);
+}
+
+.userMessage {
+  width: 100%;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-lg);
   background: var(--color-bubble-user-bg);
   color: var(--color-bubble-user-text);
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
 }
 
-.assistantMessage {
+.assistantMessageBlock {
   width: 100%;
   min-width: 0;
   margin-block-end: var(--space-3);
 }
 
+.assistantMessage {
+  width: 100%;
+  min-width: 0;
+}
+
+.messageBlock {
+  min-width: 0;
+}
+
+.messageText {
+  white-space: pre-wrap;
+}
+
+.pendingMessage {
+  opacity: 0.82;
+}
+
 .messageActions {
+  min-height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  margin-block-start: var(--space-1);
   opacity: 0;
   transition: opacity var(--transition-fast);
 }
 
-.assistantMessage:hover .messageActions,
-.assistantMessage:focus-within .messageActions {
+.messageBlock:hover .messageActions,
+.messageBlock:focus-within .messageActions {
   opacity: 1;
 }
 
-.copyButton {
+.messageActionButton {
   padding: var(--space-1);
   background: transparent;
   color: var(--color-text-muted);
   font-size: 0.75rem;
 }
 
-.copyButton:hover {
+.messageActionButton:hover {
   color: var(--color-accent);
+}
+
+.historyHint {
+  margin-inline-end: auto;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  opacity: 0;
+}
+
+.messageActions:has(.historyAction:hover, .historyAction:focus-visible)
+  .historyHint {
+  opacity: 1;
+}
+
+.messageEditor {
+  width: 100%;
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-block-end: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-danger-hover);
+  font-size: 0.875rem;
+}
+
+.noticeAction {
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+}
+
+.loading {
+  color: var(--color-text-muted);
+  text-align: center;
 }
 
 .typingIndicator {
@@ -128,7 +197,7 @@
       var(--space-3);
   }
 
-  .userMessage {
+  .userMessageBlock {
     max-width: 85%;
   }
 }

@@ -55,6 +55,7 @@ const components: Components = {
         </code>
       );
     }
+
     return (
       <CodeBlock className={className} {...props}>
         {children}

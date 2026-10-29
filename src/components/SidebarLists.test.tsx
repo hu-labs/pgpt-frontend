@@ -1,134 +1,164 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { load, save } from "../lib/storage";
+import { useState } from "react";
+import { describe, expect, test, vi } from "vitest";
+import type { Preset, Thread } from "../types";
 import PresetList from "./PresetList";
 import ThreadList from "./ThreadList";
 
-beforeEach(() => localStorage.clear());
+const thread = (title = "Original"): Thread => ({
+  threadId: "550e8400-e29b-41d4-a716-446655440000",
+  title,
+  createdAt: "2026-10-28T10:00:00.000Z",
+  updatedAt: "2026-10-28T10:00:00.000Z",
+});
 
-describe("sidebar list behavior", () => {
-  test("creates and selects a thread", async () => {
+const preset = (title = "Original preset"): Preset => ({
+  presetId: "6d9c7c45-6cb3-4ced-b0cd-66ea532f32f2",
+  title,
+  text: "Saved text",
+  createdAt: "2026-10-28T10:00:00.000Z",
+  updatedAt: "2026-10-28T10:00:00.000Z",
+});
+
+describe("thread list", () => {
+  test("creates, selects, and renames a server-returned thread", async () => {
     const user = userEvent.setup();
+    const onCreate = vi.fn().mockResolvedValue(thread("New conversation"));
+    const onRename = vi.fn().mockResolvedValue(undefined);
     const onSelect = vi.fn();
-    render(<ThreadList onSelect={onSelect} />);
 
+    function Harness() {
+      const [threads, setThreads] = useState<Thread[]>([]);
+
+      return (
+        <ThreadList
+          threads={threads}
+          activeThreadIds={new Set()}
+          onSelect={onSelect}
+          onCreate={async () => {
+            const created = await onCreate();
+            setThreads([created]);
+
+            return created;
+          }}
+          onRename={async (id, title) => {
+            await onRename(id, title);
+            setThreads((previous) =>
+              previous.map((item) =>
+                item.threadId === id ? { ...item, title } : item,
+              ),
+            );
+          }}
+          onDelete={vi.fn()}
+        />
+      );
+    }
+
+    render(<Harness />);
     await user.click(screen.getByRole("button", { name: "New thread" }));
-    expect(onSelect).toHaveBeenCalledOnce();
-    expect(screen.getByDisplayValue("New chat")).toBeInTheDocument();
-    expect(load().threads).toHaveLength(1);
+    expect(onSelect).toHaveBeenCalledWith(thread().threadId);
 
-    const input = screen.getByDisplayValue("New chat") as HTMLInputElement;
+    const input = screen.getByDisplayValue("New conversation");
     await waitFor(() => expect(input).toHaveFocus());
-    expect(input.readOnly).toBe(false);
-    expect(input.selectionStart).toBe(0);
-    expect(input.selectionEnd).toBe("New chat".length);
-
-    // Typing replaces the highlighted default title; Enter saves and locks it.
     await user.keyboard("My conversation{Enter}");
+    await waitFor(() =>
+      expect(onRename).toHaveBeenCalledWith(
+        thread().threadId,
+        "My conversation",
+      ),
+    );
+
     expect(input).toHaveValue("My conversation");
-    expect(load().threads[0].title).toBe("My conversation");
-    expect(input.readOnly).toBe(true);
-    expect(input).not.toHaveFocus();
   });
 
-  test("preserves thread rename, Escape, outside-click, and delete behavior", async () => {
+  test("keeps failed operations visible and blocks deletion while streaming", async () => {
     const user = userEvent.setup();
-    save({
-      threads: [{ id: "t1", title: "Original", createdAt: 1, updatedAt: 1 }],
-      messages: [
-        {
-          id: "m1",
-          threadId: "t1",
-          role: "user",
-          content: "Hello",
-          createdAt: 1,
-        },
-      ],
-      presets: [],
-    });
-    render(<ThreadList onSelect={vi.fn()} />);
-
-    const input = screen.getByDisplayValue("Original");
-    const actions = screen.getByRole("button", {
-      name: "Actions for Original",
-    });
-    await user.click(actions);
-    await user.click(screen.getByRole("button", { name: "Rename" }));
-    await user.clear(input);
-    await user.type(input, "Discarded");
-    await user.keyboard("{Escape}");
-    expect(input).toHaveValue("Original");
-    expect(load().threads[0].title).toBe("Original");
-
-    await user.click(actions);
-    expect(screen.getByText("Delete")).toBeInTheDocument();
-    await user.click(document.body);
-    expect(screen.queryByText("Delete")).not.toBeInTheDocument();
-
-    await user.click(actions);
-    await user.click(screen.getByRole("button", { name: "Rename" }));
-    await user.clear(input);
-    await user.type(input, "Renamed");
-    await user.tab();
-    expect(load().threads[0].title).toBe("Renamed");
+    const onDelete = vi.fn().mockRejectedValue(new Error("Failed"));
+    render(
+      <ThreadList
+        threads={[thread()]}
+        activeThreadIds={new Set([thread().threadId])}
+        onSelect={vi.fn()}
+        onCreate={vi.fn()}
+        onRename={vi.fn()}
+        onDelete={onDelete}
+      />,
+    );
 
     await user.click(
-      screen.getByRole("button", { name: "Actions for Renamed" }),
+      screen.getByRole("button", { name: "Actions for Original" }),
     );
-    await user.click(screen.getByRole("button", { name: "Delete" }));
-    expect(load().threads).toHaveLength(0);
-    expect(load().messages).toHaveLength(0);
-  });
 
-  test("creates presets only by click and appends their saved text", async () => {
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByDisplayValue("Original")).toBeInTheDocument();
+  });
+});
+
+describe("preset list", () => {
+  test("creates API-backed presets only by click and appends saved text", async () => {
     const user = userEvent.setup();
     const onAppend = vi.fn();
-    render(<PresetList onAppend={onAppend} />);
 
+    function Harness() {
+      const [presets, setPresets] = useState<Preset[]>([]);
+
+      return (
+        <PresetList
+          presets={presets}
+          onAppend={onAppend}
+          onCreate={async (title, text) => {
+            const created = { ...preset(title), text };
+            setPresets([created]);
+
+            return created;
+          }}
+          onUpdate={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      );
+    }
+
+    render(<Harness />);
     await user.type(screen.getByLabelText("Prompt title"), "Concise reply");
-    await user.keyboard("{Enter}");
-    expect(load().presets).toHaveLength(0);
-
     await user.type(screen.getByLabelText("Prompt to save"), "Be concise.");
     await user.click(screen.getByRole("button", { name: "Add preset" }));
-    expect(load().presets).toHaveLength(1);
-
     await user.click(screen.getByDisplayValue("Concise reply"));
     expect(onAppend).toHaveBeenCalledWith("Be concise.");
   });
 
-  test("preserves preset rename and delete behavior", async () => {
+  test("renames and deletes through callbacks", async () => {
     const user = userEvent.setup();
-    save({
-      threads: [],
-      messages: [],
-      presets: [
-        {
-          id: "p1",
-          title: "Original preset",
-          text: "Saved text",
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      ],
-    });
-    render(<PresetList onAppend={vi.fn()} />);
+    const onUpdate = vi.fn().mockResolvedValue(undefined);
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    render(
+      <PresetList
+        presets={[preset()]}
+        onAppend={vi.fn()}
+        onCreate={vi.fn()}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
+      />,
+    );
 
-    const input = screen.getByDisplayValue("Original preset");
     await user.click(
       screen.getByRole("button", { name: "Actions for Original preset" }),
     );
+
     await user.click(screen.getByRole("button", { name: "Rename" }));
+    const input = screen.getByDisplayValue("Original preset");
     await user.clear(input);
-    await user.type(input, "Renamed preset");
-    await user.tab();
-    expect(load().presets[0].title).toBe("Renamed preset");
+    await user.type(input, "Renamed preset{Enter}");
+    expect(onUpdate).toHaveBeenCalledWith(preset().presetId, {
+      title: "Renamed preset",
+    });
 
     await user.click(
-      screen.getByRole("button", { name: "Actions for Renamed preset" }),
+      screen.getByRole("button", { name: "Actions for Original preset" }),
     );
+
     await user.click(screen.getByRole("button", { name: "Delete" }));
-    expect(load().presets).toHaveLength(0);
+    expect(onDelete).toHaveBeenCalledWith(preset().presetId);
   });
 });

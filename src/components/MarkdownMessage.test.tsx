@@ -32,6 +32,7 @@ describe("MarkdownMessage", () => {
       value: { writeText: vi.fn().mockResolvedValue(undefined) },
       configurable: true,
     });
+
     const code = "console.log('hi')";
     render(<MarkdownMessage content={`\`\`\`js\n${code}\n\`\`\``} />);
 
