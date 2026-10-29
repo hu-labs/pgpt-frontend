@@ -62,7 +62,7 @@ jobs:
         with:
           name: ${{ inputs.environment }}-dist-artifacts
           path: ./dist/
-          retention-days: 7
+          retention-days: 14
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
