@@ -71,6 +71,10 @@
   transition: opacity var(--transition-fast);
 }
 
+.assistantMessageActions {
+  justify-content: flex-start;
+}
+
 .messageBlock:hover .messageActions,
 .messageBlock:focus-within .messageActions {
   opacity: 1;

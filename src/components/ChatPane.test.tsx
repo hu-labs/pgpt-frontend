@@ -4,6 +4,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { sendChat } from "../lib/api";
 import type { Message } from "../types";
 import ChatPane from "./ChatPane";
+import styles from "./ChatPane.module.css";
 
 vi.mock("../lib/api", () => ({ sendChat: vi.fn() }));
 
@@ -158,7 +159,9 @@ test("edits and deletes messages without implying regeneration", async () => {
     screen.getAllByRole("button", { name: "Delete message" }),
   ).toHaveLength(1);
 
-  expect(screen.getByRole("button", { name: "Copy message" })).toBeVisible();
+  const copyButton = screen.getByRole("button", { name: "Copy message" });
+  expect(copyButton).toBeVisible();
+  expect(copyButton.parentElement).toHaveClass(styles.assistantMessageActions);
 
   const userBubble = screen
     .getByText("Stored question")
@@ -168,7 +171,7 @@ test("edits and deletes messages without implying regeneration", async () => {
   const deleteButton = screen.getByRole("button", { name: "Delete message" });
   expect(userBubble).not.toContainElement(editButton);
   expect(userBubble).not.toContainElement(deleteButton);
-  expect(deleteButton).toHaveTextContent("×");
+  expect(deleteButton).toHaveTextContent("X");
 
   await user.click(editButton);
   const editor = screen.getByRole("textbox", { name: "Edit message content" });

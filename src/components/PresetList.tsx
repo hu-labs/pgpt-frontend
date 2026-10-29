@@ -1,9 +1,9 @@
 /* Renders prompt presets stored in DynamoDB and delegates their CRUD operations to the workspace cache. */
 
 import { useRef, useState } from "react";
-import { useClickOutside } from "../lib/useClickOutside";
 import type { Preset } from "../types";
 import controls from "./Controls.module.css";
+import SidebarItemMenu from "./SidebarItemMenu";
 import styles from "./SidebarList.module.css";
 
 interface PresetListProps {
@@ -36,9 +36,9 @@ export default function PresetList({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useClickOutside(menuRef, () => setOpenMenuId(null));
+  const actionTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>(
+    {},
+  );
 
   async function handleCreate() {
     if (!title.trim() || !text.trim() || isCreating) return;
@@ -177,6 +177,9 @@ export default function PresetList({
                 }}
               />
               <button
+                ref={(element) => {
+                  actionTriggerRefs.current[id] = element;
+                }}
                 type="button"
                 className={`${controls.button} ${controls.icon} ${styles.actionsToggle}`}
                 onClick={() => setOpenMenuId(openMenuId === id ? null : id)}
@@ -187,10 +190,11 @@ export default function PresetList({
                 <span aria-hidden="true">⋮</span>
               </button>
               {openMenuId === id && (
-                <div
-                  ref={menuRef}
+                <SidebarItemMenu
                   id={`preset-actions-${id}`}
-                  className={styles.actionsPanel}
+                  anchor={actionTriggerRefs.current[id]}
+                  label={`Actions for ${preset.title}`}
+                  onDismiss={() => setOpenMenuId(null)}
                 >
                   <button
                     type="button"
@@ -207,7 +211,7 @@ export default function PresetList({
                   >
                     Delete
                   </button>
-                </div>
+                </SidebarItemMenu>
               )}
             </li>
           );

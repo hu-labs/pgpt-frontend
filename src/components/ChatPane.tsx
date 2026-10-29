@@ -158,7 +158,9 @@ function MessageBubble({
         >
           <RenderedMarkdown content={message.content} />
         </div>
-        <div className={styles.messageActions}>
+        <div
+          className={`${styles.messageActions} ${styles.assistantMessageActions}`}
+        >
           <button
             type="button"
             className={`${controls.button} ${styles.messageActionButton}`}
@@ -220,7 +222,7 @@ function MessageBubble({
               aria-label="Cancel editing message"
               title="Cancel"
             >
-              ×
+              X
             </button>
           </>
         ) : (
@@ -246,7 +248,7 @@ function MessageBubble({
               aria-label="Delete message"
               title="Delete"
             >
-              ×
+              X
             </button>
           </>
         )}

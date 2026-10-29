@@ -4,6 +4,7 @@ import { useState } from "react";
 import { describe, expect, test, vi } from "vitest";
 import type { Preset, Thread } from "../types";
 import PresetList from "./PresetList";
+import { calculateMenuPosition } from "./sidebarMenuPosition";
 import ThreadList from "./ThreadList";
 
 const thread = (title = "Original"): Thread => ({
@@ -22,6 +23,33 @@ const preset = (title = "Original preset"): Preset => ({
 });
 
 describe("thread list", () => {
+  test("portals actions outside the scrolling section", async () => {
+    const user = userEvent.setup();
+    render(
+      <ThreadList
+        threads={[thread()]}
+        activeThreadIds={new Set()}
+        onSelect={vi.fn()}
+        onCreate={vi.fn()}
+        onRename={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "Actions for Original",
+    });
+
+    await user.click(trigger);
+
+    const menu = document.querySelector<HTMLElement>(
+      "[data-sidebar-item-menu]",
+    );
+
+    expect(menu).toBeInTheDocument();
+    expect(trigger.closest("section")).not.toContainElement(menu);
+  });
+
   test("creates, selects, and renames a server-returned thread", async () => {
     const user = userEvent.setup();
     const onCreate = vi.fn().mockResolvedValue(thread("New conversation"));
@@ -94,6 +122,16 @@ describe("thread list", () => {
     expect(onDelete).not.toHaveBeenCalled();
     expect(screen.getByDisplayValue("Original")).toBeInTheDocument();
   });
+});
+
+test("opens a sidebar item menu upward when space below is insufficient", () => {
+  const position = calculateMenuPosition(
+    { top: 440, right: 280, bottom: 480 },
+    { width: 104, height: 80 },
+    { width: 320, height: 500 },
+  );
+
+  expect(position).toMatchObject({ top: 356, left: 176, opensUpward: true });
 });
 
 describe("preset list", () => {
