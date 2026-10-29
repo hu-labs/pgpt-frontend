@@ -1,0 +1,91 @@
+name: Rollback to Previous Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to roll back"
+        required: true
+        type: environment
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+
+jobs:
+  resolve-previous:
+    name: Find previous ${{ inputs.environment }} deployment
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      run_id: ${{ steps.resolve.outputs.run_id }}
+    steps:
+      - name: Resolve previous deployment artifact
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "${ENVIRONMENT}" in
+            preview) workflow_file="deploy-preview.yml" ;;
+            production) workflow_file="deploy-production.yml" ;;
+            *)
+              echo "::error::Unsupported environment: ${ENVIRONMENT}"
+              exit 1
+              ;;
+          esac
+
+          artifact_name="${ENVIRONMENT}-dist-artifacts"
+          runs_json="$(gh api --paginate --slurp \
+            "repos/${REPOSITORY}/actions/workflows/${workflow_file}/runs?status=success&per_page=100")"
+          mapfile -t run_ids < <(jq -r '.[].workflow_runs[].id' <<< "${runs_json}")
+          matching_runs=()
+
+          for run_id in "${run_ids[@]}"; do
+            artifacts_json="$(gh api --paginate --slurp \
+              "repos/${REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100")"
+            artifact_count="$(jq --arg name "${artifact_name}" \
+              '[.[].artifacts[] | select(.name == $name and .expired == false)] | length' \
+              <<< "${artifacts_json}")"
+
+            if [[ "${artifact_count}" -gt 0 ]]; then
+              matching_runs+=("${run_id}")
+            fi
+
+            if [[ "${#matching_runs[@]}" -eq 2 ]]; then
+              break
+            fi
+          done
+
+          if [[ "${#matching_runs[@]}" -lt 2 ]]; then
+            echo "::error::No available previous version for ${ENVIRONMENT}. Two successful deployments with retained ${artifact_name} artifacts are required."
+            exit 1
+          fi
+
+          run_id="${matching_runs[1]}"
+          echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
+          echo "Selected previous ${ENVIRONMENT} deployment: ${run_id}"
+          {
+            echo "## Selected rollback deployment"
+            echo
+            echo "- Environment: ${ENVIRONMENT}"
+            echo "- Artifact: ${artifact_name}"
+            echo "- Run: https://github.com/${REPOSITORY}/actions/runs/${run_id}"
+            echo
+            echo "Previous means the second newest successful deployment with a retained artifact. Repeated rollbacks may select the same version."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  rollback:
+    name: Roll back ${{ inputs.environment }}
+    needs: resolve-previous
+    uses: ./.github/workflows/rollback-env.yml
+    with:
+      environment: ${{ inputs.environment }}
+      run_id: ${{ needs.resolve-previous.outputs.run_id }}
