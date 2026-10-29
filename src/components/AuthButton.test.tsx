@@ -17,6 +17,7 @@ vi.mock("aws-amplify/utils", () => ({
   Hub: {
     listen: vi.fn((_channel: string, listener: typeof auth.listener) => {
       auth.listener = listener;
+
       return auth.unsubscribe;
     }),
   },
@@ -42,6 +43,7 @@ test("checks the session, shows Login, and starts Amplify's redirect", async () 
   expect(
     screen.getByRole("button", { name: "Checking login status" }),
   ).toBeDisabled();
+
   const login = await screen.findByRole("button", { name: "Login" });
   await user.click(login);
   expect(auth.signInWithRedirect).toHaveBeenCalledOnce();
@@ -77,6 +79,7 @@ test("ignores a session check that completes after sign-out", async () => {
       resolve = done;
     }),
   );
+
   render(<AuthButton />);
   await emit("signedOut");
   await act(async () => resolve(signedInUser));
@@ -91,9 +94,11 @@ test("reports redirect and action failures and allows retry", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Login could not be started",
   );
+
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Login" })).toBeEnabled(),
   );
+
   await emit("signInWithRedirect_failure");
   expect(screen.getByRole("alert")).toHaveTextContent(
     "Login could not be completed",

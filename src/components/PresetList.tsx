@@ -1,70 +1,100 @@
-/*
-        Preset CRUD
-*/
+/* Renders prompt presets stored in DynamoDB and delegates their CRUD operations to the workspace cache. */
 
-import { useState, useRef } from "react";
-import { useStore, useStorageUser } from "../lib/storage";
-import { useClickOutside } from "../lib/useClickOutside";
+import { useRef, useState } from "react";
 import type { Preset } from "../types";
 import controls from "./Controls.module.css";
+import SidebarItemMenu from "./SidebarItemMenu";
 import styles from "./SidebarList.module.css";
 
-export default function PresetList({
-  onAppend,
-}: {
+interface PresetListProps {
+  presets: Preset[];
   onAppend: (text: string) => void;
-}) {
-  const [store, setStore] = useStore();
-  const userId = useStorageUser();
+  onCreate: (title: string, text: string) => Promise<Preset>;
+  onUpdate: (
+    id: string,
+    patch: Partial<Pick<Preset, "title" | "text">>,
+  ) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  isLoading?: boolean;
+  disabled?: boolean;
+}
+
+export default function PresetList({
+  presets,
+  onAppend,
+  onCreate,
+  onUpdate,
+  onDelete,
+  isLoading = false,
+  disabled = false,
+}: PresetListProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
-  const presetInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const actionTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>(
+    {},
+  );
 
-  useClickOutside(menuRef, () => setOpenMenuId(null));
+  async function handleCreate() {
+    if (!title.trim() || !text.trim() || isCreating) return;
+    setIsCreating(true);
 
-  function createPreset() {
-    const p: Preset = {
-      id: crypto.randomUUID(),
-      title,
-      text,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    setStore((prev) => ({ ...prev, presets: [p, ...prev.presets] }));
-    setTitle("");
-    setText("");
+    try {
+      await onCreate(title.trim(), text.trim());
+      setTitle("");
+      setText("");
+    } catch {
+      // Preserve the form values for retry; the workspace reports the failure.
+    } finally {
+      setIsCreating(false);
+    }
   }
 
-  function updatePreset(id: string, patch: Partial<Preset>) {
-    setStore((prev) => ({
-      ...prev,
-      presets: prev.presets.map((p) =>
-        p.id === id ? { ...p, ...patch, updatedAt: Date.now() } : p,
-      ),
-    }));
-    setEditingPresetId(null);
-  }
-
-  function enterEditMode(id: string) {
-    setEditingPresetId(id);
+  function enterEditMode(preset: Preset) {
+    setEditingPresetId(preset.presetId);
+    setEditingTitle(preset.title);
     setOpenMenuId(null);
     setTimeout(() => {
-      const input = presetInputRefs.current[id];
-      if (input) {
-        input.focus();
-        input.select();
-      }
+      const input = inputRefs.current[preset.presetId];
+      input?.focus();
+      input?.select();
     }, 0);
   }
 
-  function deletePreset(id: string) {
-    setStore((prev) => ({
-      ...prev,
-      presets: prev.presets.filter((p) => p.id !== id),
-    }));
+  async function saveTitle(preset: Preset) {
+    const nextTitle = editingTitle.trim();
+    if (!nextTitle || nextTitle === preset.title) {
+      if (nextTitle === preset.title) setEditingPresetId(null);
+
+      return;
+    }
+
+    setBusyId(preset.presetId);
+    try {
+      await onUpdate(preset.presetId, { title: nextTitle });
+      setEditingPresetId(null);
+    } catch {
+      // Keep the editor open so the user can retry.
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setBusyId(id);
+    try {
+      await onDelete(id);
+      setOpenMenuId(null);
+    } catch {
+      // Keep the server-owned preset visible and the actions available.
+    } finally {
+      setBusyId(null);
+    }
   }
 
   return (
@@ -82,7 +112,7 @@ export default function PresetList({
           className={controls.field}
           placeholder="Prompt title"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(event) => setTitle(event.target.value)}
         />
 
         <label className={controls.visuallyHidden} htmlFor="preset-text">
@@ -93,101 +123,99 @@ export default function PresetList({
           className={controls.field}
           placeholder="Prompt you want to save"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(event) => setText(event.target.value)}
         />
 
         <button
           type="button"
-          onClick={createPreset}
-          disabled={!userId}
+          onClick={() => void handleCreate()}
+          disabled={disabled || isCreating || !title.trim() || !text.trim()}
           className={`${controls.button} ${controls.primary} ${styles.centeredAction}`}
         >
-          Add preset
+          {isCreating ? "Adding…" : "Add preset"}
         </button>
       </div>
 
+      {isLoading && <p className={styles.status}>Loading presets…</p>}
       <ul className={styles.list}>
-        {store.presets.map((p) => (
-          <li className={styles.item} key={p.id}>
-            <input
-              className={`${controls.field} ${styles.itemInput}${
-                editingPresetId === p.id ? ` ${styles.itemInputEditing}` : ""
-              }`}
-              defaultValue={p.title}
-              readOnly={editingPresetId !== p.id}
-              aria-label={`Preset title: ${p.title}`}
-              onClick={() => {
-                if (editingPresetId !== p.id) {
-                  onAppend(p.text);
-                }
-              }}
-              onBlur={(e) => {
-                if (editingPresetId === p.id) {
-                  updatePreset(p.id, { title: e.target.value });
-                }
-              }}
-              onMouseDown={(e) => {
-                // Prevent text selection when inactive
-                if (editingPresetId !== p.id) {
-                  e.preventDefault();
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && editingPresetId === p.id) {
-                  const input = e.currentTarget as HTMLInputElement;
-                  input.setSelectionRange(0, 0);
-                  input.blur();
-                } else if (e.key === "Escape" && editingPresetId === p.id) {
-                  const input = e.currentTarget as HTMLInputElement;
-                  input.value = p.title;
-                  input.setSelectionRange(0, 0);
-                  setEditingPresetId(null);
-                  input.blur();
-                }
-              }}
-              ref={(e) => {
-                presetInputRefs.current[p.id] = e;
-              }}
-            />
-            <button
-              type="button"
-              className={`${controls.button} ${controls.icon} ${styles.actionsToggle}`}
-              onClick={() => setOpenMenuId(openMenuId === p.id ? null : p.id)}
-              aria-label={`Actions for ${p.title}`}
-              aria-expanded={openMenuId === p.id}
-              aria-controls={`preset-actions-${p.id}`}
-            >
-              <span aria-hidden="true">⋮</span>
-            </button>
-            {openMenuId === p.id && (
-              <div
-                ref={menuRef}
-                id={`preset-actions-${p.id}`}
-                className={styles.actionsPanel}
+        {presets.map((preset) => {
+          const id = preset.presetId;
+          const isEditing = editingPresetId === id;
+
+          return (
+            <li className={styles.item} key={id}>
+              <input
+                className={`${controls.field} ${styles.itemInput}${
+                  isEditing ? ` ${styles.itemInputEditing}` : ""
+                }`}
+                value={isEditing ? editingTitle : preset.title}
+                readOnly={!isEditing}
+                disabled={busyId === id}
+                aria-label={`Preset title: ${preset.title}`}
+                onChange={(event) => setEditingTitle(event.target.value)}
+                onClick={() => {
+                  if (!isEditing) onAppend(preset.text);
+                }}
+                onBlur={() => {
+                  if (isEditing) void saveTitle(preset);
+                }}
+                onMouseDown={(event) => {
+                  if (!isEditing) event.preventDefault();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && isEditing) {
+                    event.preventDefault();
+                    void saveTitle(preset);
+                  } else if (event.key === "Escape" && isEditing) {
+                    event.preventDefault();
+                    setEditingPresetId(null);
+                    setEditingTitle(preset.title);
+                  }
+                }}
+                ref={(element) => {
+                  inputRefs.current[id] = element;
+                }}
+              />
+              <button
+                ref={(element) => {
+                  actionTriggerRefs.current[id] = element;
+                }}
+                type="button"
+                className={`${controls.button} ${controls.icon} ${styles.actionsToggle}`}
+                onClick={() => setOpenMenuId(openMenuId === id ? null : id)}
+                aria-label={`Actions for ${preset.title}`}
+                aria-expanded={openMenuId === id}
+                aria-controls={`preset-actions-${id}`}
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    enterEditMode(p.id);
-                  }}
-                  className={`${controls.button} ${styles.actionButton}`}
+                <span aria-hidden="true">⋮</span>
+              </button>
+              {openMenuId === id && (
+                <SidebarItemMenu
+                  id={`preset-actions-${id}`}
+                  anchor={actionTriggerRefs.current[id]}
+                  label={`Actions for ${preset.title}`}
+                  onDismiss={() => setOpenMenuId(null)}
                 >
-                  Rename
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    deletePreset(p.id);
-                    setOpenMenuId(null);
-                  }}
-                  className={`${controls.button} ${styles.actionButton}`}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-          </li>
-        ))}
+                  <button
+                    type="button"
+                    onClick={() => enterEditMode(preset)}
+                    className={`${controls.button} ${styles.actionButton}`}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(id)}
+                    disabled={busyId === id}
+                    className={`${controls.button} ${styles.actionButton}`}
+                  >
+                    Delete
+                  </button>
+                </SidebarItemMenu>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

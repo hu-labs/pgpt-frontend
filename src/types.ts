@@ -1,26 +1,26 @@
-/*
-    types.ts — data models
-*/
-// src/types.ts
-export type Role = "user" | "assistant" | "system";
+/* Shared data models returned by the authenticated PromptGPT API. */
+
+export type Role = "user" | "assistant";
 
 export interface Thread {
-  id: string;
+  threadId: string;
   title: string;
-  createdAt: number;
-  updatedAt: number;
+  createdAt: string;
+  updatedAt: string;
 }
+
 export interface Message {
-  id: string;
+  messageId: string;
   threadId: string;
   role: Role;
   content: string;
-  createdAt: number;
+  createdAt: string;
 }
+
 export interface Preset {
-  id: string;
+  presetId: string;
   title: string;
   text: string;
-  createdAt: number;
-  updatedAt: number;
+  createdAt: string;
+  updatedAt: string;
 }

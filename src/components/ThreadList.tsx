@@ -1,79 +1,99 @@
-/*
-        Thread CRUD
-*/
+/* Renders the server-backed thread list and delegates all mutations to the workspace cache. */
 
-import { useState, useRef } from "react";
-import { useStore, useStorageUser } from "../lib/storage";
-import { useClickOutside } from "../lib/useClickOutside";
+import { useRef, useState } from "react";
 import type { Thread } from "../types";
 import controls from "./Controls.module.css";
+import SidebarItemMenu from "./SidebarItemMenu";
 import styles from "./SidebarList.module.css";
 
-export default function ThreadList({
-  onSelect,
-  onDelete,
-}: {
+interface ThreadListProps {
+  threads: Thread[];
   onSelect: (id: string) => void;
-  onDelete?: (id: string) => void;
-}) {
-  const [store, setStore] = useStore();
-  const userId = useStorageUser();
+  onCreate: () => Promise<Thread>;
+  onRename: (id: string, title: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  activeThreadIds: ReadonlySet<string>;
+  isLoading?: boolean;
+  disabled?: boolean;
+}
+
+export default function ThreadList({
+  threads,
+  onSelect,
+  onCreate,
+  onRename,
+  onDelete,
+  activeThreadIds,
+  isLoading = false,
+  disabled = false,
+}: ThreadListProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const menuRef = useRef<HTMLDivElement>(null);
+  const actionTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>(
+    {},
+  );
 
-  useClickOutside(menuRef, () => setOpenMenuId(null));
-
-  // Rename thread helper: focus and select the input for the given thread
-  function enterEditMode(id: string) {
-    setEditingThreadId(id);
+  function enterEditMode(thread: Thread) {
+    setEditingThreadId(thread.threadId);
+    setEditingTitle(thread.title);
     setOpenMenuId(null);
     setTimeout(() => {
-      const input = inputRefs.current[id];
-      if (input) {
-        input.focus();
-        input.select();
-      }
+      const input = inputRefs.current[thread.threadId];
+      input?.focus();
+      input?.select();
     }, 0);
   }
 
-  function createThread() {
-    const t: Thread = {
-      id: crypto.randomUUID(),
-      title: "New chat",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    setStore((prev) => ({ ...prev, threads: [t, ...prev.threads] }));
-    onSelect(t.id);
+  async function handleCreate() {
+    if (isCreating) return;
+    setIsCreating(true);
 
-    // New threads use the same focused, selected title editor as Rename.
-    enterEditMode(t.id);
+    try {
+      const thread = await onCreate();
+      onSelect(thread.threadId);
+      enterEditMode(thread);
+    } catch {
+      // The workspace error banner reports the server failure.
+    } finally {
+      setIsCreating(false);
+    }
   }
 
-  function renameThread(id: string, title: string) {
-    // Set title in store
-    setStore((prev) => {
-      const next = {
-        ...prev,
-        threads: prev.threads.map((t) =>
-          t.id === id ? { ...t, title, updatedAt: Date.now() } : t,
-        ),
-      };
-      return next;
-    });
-    setEditingThreadId(null);
+  async function saveRename(thread: Thread) {
+    const title = editingTitle.trim();
+    if (!title || title === thread.title) {
+      if (title === thread.title) setEditingThreadId(null);
+
+      return;
+    }
+
+    setBusyId(thread.threadId);
+    try {
+      await onRename(thread.threadId, title);
+      setEditingThreadId(null);
+    } catch {
+      // Keep the editor open so the user can retry.
+    } finally {
+      setBusyId(null);
+    }
   }
 
-  function deleteThread(id: string) {
-    // Delete the thread and its messages together; global presets stay untouched.
-    setStore((prev) => ({
-      ...prev,
-      threads: prev.threads.filter((t) => t.id !== id),
-      messages: prev.messages.filter((m) => m.threadId !== id),
-    }));
-    onDelete?.(id);
+  async function handleDelete(id: string) {
+    if (activeThreadIds.has(id)) return;
+    setBusyId(id);
+
+    try {
+      await onDelete(id);
+      setOpenMenuId(null);
+    } catch {
+      // Keep the server-owned thread visible and the actions available.
+    } finally {
+      setBusyId(null);
+    }
   }
 
   return (
@@ -83,94 +103,98 @@ export default function ThreadList({
       </h2>
       <button
         type="button"
-        onClick={createThread}
-        disabled={!userId}
+        onClick={() => void handleCreate()}
+        disabled={disabled || isCreating}
         className={`${controls.button} ${controls.primary} ${styles.centeredAction}`}
       >
-        New thread
+        {isCreating ? "Creating…" : "New thread"}
       </button>
+      {isLoading && <p className={styles.status}>Loading conversations…</p>}
       <ul className={styles.list}>
-        {store.threads.map((t) => (
-          <li className={styles.item} key={t.id}>
-            <input
-              className={`${controls.field} ${styles.itemInput}${
-                editingThreadId === t.id ? ` ${styles.itemInputEditing}` : ""
-              }`}
-              defaultValue={t.title}
-              readOnly={editingThreadId !== t.id}
-              aria-label={`Thread title: ${t.title}`}
-              onClick={() => {
-                if (editingThreadId !== t.id) {
-                  onSelect(t.id);
-                }
-              }}
-              onBlur={(e) => {
-                if (editingThreadId === t.id) {
-                  renameThread(t.id, (e.target as HTMLInputElement).value);
-                }
-              }}
-              onMouseDown={(e) => {
-                // Prevent text selection when inactive
-                if (editingThreadId !== t.id) {
-                  e.preventDefault();
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && editingThreadId === t.id) {
-                  const input = e.currentTarget as HTMLInputElement;
-                  input.setSelectionRange(0, 0);
-                  input.blur();
-                } else if (e.key === "Escape" && editingThreadId === t.id) {
-                  const input = e.currentTarget as HTMLInputElement;
-                  input.value = t.title;
-                  input.setSelectionRange(0, 0);
-                  setEditingThreadId(null);
-                  input.blur();
-                }
-              }}
-              ref={(e) => {
-                inputRefs.current[t.id] = e;
-              }}
-            />
-            <button
-              type="button"
-              className={`${controls.button} ${controls.icon} ${styles.actionsToggle}`}
-              onClick={() => setOpenMenuId(openMenuId === t.id ? null : t.id)}
-              aria-label={`Actions for ${t.title}`}
-              aria-expanded={openMenuId === t.id}
-              aria-controls={`thread-actions-${t.id}`}
-            >
-              <span aria-hidden="true">⋮</span>
-            </button>
-            {openMenuId === t.id && (
-              <div
-                ref={menuRef}
-                id={`thread-actions-${t.id}`}
-                className={styles.actionsPanel}
+        {threads.map((thread) => {
+          const id = thread.threadId;
+          const isEditing = editingThreadId === id;
+          const isActive = activeThreadIds.has(id);
+
+          return (
+            <li className={styles.item} key={id}>
+              <input
+                className={`${controls.field} ${styles.itemInput}${
+                  isEditing ? ` ${styles.itemInputEditing}` : ""
+                }`}
+                value={isEditing ? editingTitle : thread.title}
+                readOnly={!isEditing}
+                disabled={busyId === id}
+                aria-label={`Thread title: ${thread.title}`}
+                onChange={(event) => setEditingTitle(event.target.value)}
+                onClick={() => {
+                  if (!isEditing) onSelect(id);
+                }}
+                onBlur={() => {
+                  if (isEditing) void saveRename(thread);
+                }}
+                onMouseDown={(event) => {
+                  if (!isEditing) event.preventDefault();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && isEditing) {
+                    event.preventDefault();
+                    void saveRename(thread);
+                  } else if (event.key === "Escape" && isEditing) {
+                    event.preventDefault();
+                    setEditingThreadId(null);
+                    setEditingTitle(thread.title);
+                  }
+                }}
+                ref={(element) => {
+                  inputRefs.current[id] = element;
+                }}
+              />
+              <button
+                ref={(element) => {
+                  actionTriggerRefs.current[id] = element;
+                }}
+                type="button"
+                className={`${controls.button} ${controls.icon} ${styles.actionsToggle}`}
+                onClick={() => setOpenMenuId(openMenuId === id ? null : id)}
+                aria-label={`Actions for ${thread.title}`}
+                aria-expanded={openMenuId === id}
+                aria-controls={`thread-actions-${id}`}
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    enterEditMode(t.id);
-                  }}
-                  className={`${controls.button} ${styles.actionButton}`}
+                <span aria-hidden="true">⋮</span>
+              </button>
+              {openMenuId === id && (
+                <SidebarItemMenu
+                  id={`thread-actions-${id}`}
+                  anchor={actionTriggerRefs.current[id]}
+                  label={`Actions for ${thread.title}`}
+                  onDismiss={() => setOpenMenuId(null)}
                 >
-                  Rename
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    deleteThread(t.id);
-                    setOpenMenuId(null);
-                  }}
-                  className={`${controls.button} ${styles.actionButton}`}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
-          </li>
-        ))}
+                  <button
+                    type="button"
+                    onClick={() => enterEditMode(thread)}
+                    className={`${controls.button} ${styles.actionButton}`}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(id)}
+                    disabled={isActive || busyId === id}
+                    title={
+                      isActive
+                        ? "Wait for the active response before deleting this thread."
+                        : undefined
+                    }
+                    className={`${controls.button} ${styles.actionButton}`}
+                  >
+                    Delete
+                  </button>
+                </SidebarItemMenu>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

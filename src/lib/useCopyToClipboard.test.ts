@@ -28,6 +28,7 @@ describe("useCopyToClipboard", () => {
     act(() => {
       vi.advanceTimersByTime(1000);
     });
+
     expect(result.current.copied).toBe(false);
 
     vi.useRealTimers();

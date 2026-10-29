@@ -1,6 +1,4 @@
-/*
-    messages display, composer, send
-*/
+/* Displays authoritative messages, per-thread drafts, and temporary streaming replies. */
 
 import {
   lazy,
@@ -10,26 +8,39 @@ import {
   useRef,
   useState,
 } from "react";
-import { getStore, subscribeStore, useStore } from "../lib/storage";
+import { sendChat } from "../lib/api";
 import { useCopyToClipboard } from "../lib/useCopyToClipboard";
-import { fetchAuthSession } from "aws-amplify/auth";
-
 import type { Message } from "../types";
-
 import controls from "./Controls.module.css";
 import styles from "./ChatPane.module.css";
 
-/*
-  SSE contract emitted by the backend (see backend-serverless-repo handler.js):
-    event: delta  data: {"content": "..."}   - incremental assistant text
-    event: done   data: {}                   - clean completion
-    event: error  data: {"message": "..."}   - fatal failure, stream still ends after this
-  If the stream ends without a "done" or "error" event, that itself signals a
-  timeout/dropped connection (handled in send() below).
-*/
-type PendingReply = { content: string; status: "waiting" | "streaming" };
+type PendingReply = {
+  userContent: string;
+  assistantContent: string;
+  status: "waiting" | "streaming";
+};
 
-// Parses a fetch() response body as the backend's SSE stream.
+interface ChatPaneProps {
+  threadId: string | null;
+  threadIds: string[];
+  messages?: Message[];
+  isLoadingMessages?: boolean;
+  presetAppend?: string;
+  presetTrigger: number;
+  onFocus?: () => void;
+  onRefreshMessages: (threadId: string) => Promise<Message[]>;
+  onRefreshThreads: () => Promise<unknown>;
+  onEditMessage: (
+    threadId: string,
+    messageId: string,
+    content: string,
+  ) => Promise<void>;
+  onDeleteMessage: (threadId: string, messageId: string) => Promise<void>;
+  onError: (error: unknown, fallback: string) => void;
+  onActiveChange: (threadId: string, active: boolean) => void;
+}
+
+// Parse the backend's heartbeat-tolerant SSE response one complete event at a time.
 async function* readSseEvents(body: ReadableStream<Uint8Array>) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
@@ -47,17 +58,20 @@ async function* readSseEvents(body: ReadableStream<Uint8Array>) {
       const lines = rawEvent.split("\n");
       const eventLine = lines.find((line) => line.startsWith("event:"));
       const dataLine = lines.find((line) => line.startsWith("data:"));
-      if (!eventLine || !dataLine) continue; // ignore ": ping" heartbeat comments
+      if (!eventLine || !dataLine) continue;
 
       yield {
         event: eventLine.slice("event:".length).trim(),
-        data: JSON.parse(dataLine.slice("data:".length).trim()),
+        data: JSON.parse(dataLine.slice("data:".length).trim()) as Record<
+          string,
+          unknown
+        >,
       };
     }
   }
 }
 
-// Fetch Markdown parsing and syntax highlighting only when an assistant reply is shown.
+// Load Markdown and syntax highlighting only when assistant content is visible.
 const MarkdownMessage = lazy(() => import("./MarkdownMessage"));
 
 function RenderedMarkdown({ content }: { content: string }) {
@@ -70,27 +84,12 @@ function RenderedMarkdown({ content }: { content: string }) {
   );
 }
 
-function AssistantMessage({ content }: { content: string }) {
-  const { copied, copy } = useCopyToClipboard();
-  return (
-    <div className={styles.assistantMessage}>
-      <RenderedMarkdown content={content} />
-      <div className={styles.messageActions}>
-        <button
-          type="button"
-          className={`${controls.button} ${styles.copyButton}`}
-          onClick={() => copy(content)}
-        >
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function TypingIndicator() {
   return (
-    <div className={styles.assistantMessage} aria-label="Assistant is typing">
+    <div
+      className={`${styles.assistantMessageBlock} ${styles.assistantMessage}`}
+      aria-label="Assistant is typing"
+    >
       <span className={styles.typingIndicator}>
         <span className={styles.typingDot} />
         <span className={styles.typingDot} />
@@ -100,58 +99,232 @@ function TypingIndicator() {
   );
 }
 
+function MessageBubble({
+  message,
+  disabled,
+  onEdit,
+  onDelete,
+}: {
+  message: Message;
+  disabled: boolean;
+  onEdit: (content: string) => Promise<void>;
+  onDelete: () => Promise<void>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingContent, setEditingContent] = useState(message.content);
+  const [isBusy, setIsBusy] = useState(false);
+  const { copied, copy } = useCopyToClipboard();
+
+  async function saveEdit() {
+    const content = editingContent.trim();
+    if (!content || content === message.content) {
+      if (content === message.content) setIsEditing(false);
+
+      return;
+    }
+
+    setIsBusy(true);
+    try {
+      await onEdit(content);
+      setIsEditing(false);
+    } catch {
+      // The workspace error banner reports the failure; keep editing for retry.
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function removeMessage() {
+    setIsBusy(true);
+    try {
+      await onDelete();
+    } catch {
+      // The authoritative message remains visible and the workspace reports the failure.
+      setIsBusy(false);
+    }
+  }
+
+  const isAssistant = message.role === "assistant";
+
+  if (isAssistant) {
+    return (
+      <div
+        className={`${styles.messageBlock} ${styles.assistantMessageBlock}`}
+        data-message-role={message.role}
+      >
+        <div
+          className={styles.assistantMessage}
+          data-message-bubble="assistant"
+        >
+          <RenderedMarkdown content={message.content} />
+        </div>
+        <div
+          className={`${styles.messageActions} ${styles.assistantMessageActions}`}
+        >
+          <button
+            type="button"
+            className={`${controls.button} ${styles.messageActionButton}`}
+            onClick={() => copy(message.content)}
+            aria-label="Copy message"
+            title={copied ? "Copied" : "Copy"}
+          >
+            {copied ? "✓" : "⧉"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`${styles.messageBlock} ${styles.userMessageBlock}`}
+      data-message-role={message.role}
+    >
+      <div className={styles.userMessage} data-message-bubble="user">
+        {isEditing ? (
+          <textarea
+            className={`${controls.field} ${styles.messageEditor}`}
+            value={editingContent}
+            onChange={(event) => setEditingContent(event.target.value)}
+            aria-label="Edit message content"
+            disabled={isBusy || disabled}
+            autoFocus
+          />
+        ) : (
+          <div className={styles.messageText}>{message.content}</div>
+        )}
+      </div>
+
+      <div className={styles.messageActions}>
+        <span className={styles.historyHint}>
+          Edits and deletions do not regenerate later replies.
+        </span>
+        {isEditing ? (
+          <>
+            <button
+              type="button"
+              className={`${controls.button} ${styles.messageActionButton}`}
+              onClick={() => void saveEdit()}
+              disabled={disabled || isBusy || !editingContent.trim()}
+              aria-label="Save edited message"
+              title="Save"
+            >
+              ✓
+            </button>
+            <button
+              type="button"
+              className={`${controls.button} ${styles.messageActionButton}`}
+              onClick={() => {
+                setEditingContent(message.content);
+                setIsEditing(false);
+              }}
+              disabled={isBusy}
+              aria-label="Cancel editing message"
+              title="Cancel"
+            >
+              X
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className={`${controls.button} ${styles.messageActionButton} ${styles.historyAction}`}
+              onClick={() => {
+                setEditingContent(message.content);
+                setIsEditing(true);
+              }}
+              disabled={disabled || isBusy}
+              aria-label="Edit message"
+              title="Edit"
+            >
+              ✎
+            </button>
+            <button
+              type="button"
+              className={`${controls.button} ${styles.messageActionButton} ${styles.historyAction}`}
+              onClick={() => void removeMessage()}
+              disabled={disabled || isBusy}
+              aria-label="Delete message"
+              title="Delete"
+            >
+              X
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ChatPane({
   threadId,
+  threadIds,
+  messages,
+  isLoadingMessages = false,
   presetAppend,
   presetTrigger,
   onFocus,
-}: {
-  threadId: string | null;
-  presetAppend?: string;
-  presetTrigger: number; // Trigger for the preset use
-  onFocus?: () => void;
-}) {
-  const [store, setStore] = useStore();
-  const [inputs, setInputs] = useState<Record<string, string>>({}); // 1 user input per threadId
-  const [pending, setPending] = useState<Record<string, PendingReply>>({}); // in-flight assistant reply per threadId; not persisted until it finishes
-  const messageContainerRef = useRef<HTMLDivElement>(null); // Ref for the message display area
-
-  const messages = store.messages.filter((m) => m.threadId === threadId);
-
+  onRefreshMessages,
+  onRefreshThreads,
+  onEditMessage,
+  onDeleteMessage,
+  onError,
+  onActiveChange,
+}: ChatPaneProps) {
+  // Keep drafts, pending replies, and transient notices isolated by thread.
+  const [inputs, setInputs] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState<Record<string, PendingReply>>({});
+  const [notices, setNotices] = useState<Record<string, string>>({});
+  const messageContainerRef = useRef<HTMLDivElement>(null);
   const requests = useRef(new Map<string, AbortController>());
+  const notifyActive = useEffectEvent(onActiveChange);
+  const knownThreadIds = threadIds.join("\u0000");
 
+  // Abort and forget work only when its thread disappears; switching selection preserves it.
   useEffect(() => {
-    const controllers = requests.current;
-    // Remove only deleted threads' requests/drafts, but preserve other chats.
-    const unsubscribe = subscribeStore(() => {
-      const exists = (id: string) =>
-        getStore().threads.some((thread) => thread.id === id);
-      for (const [id, controller] of controllers) {
-        if (!exists(id)) {
-          controller.abort();
-          controllers.delete(id);
-        }
-      }
-      setInputs((prev) =>
-        Object.fromEntries(Object.entries(prev).filter(([id]) => exists(id))),
-      );
-      setPending((prev) =>
-        Object.fromEntries(Object.entries(prev).filter(([id]) => exists(id))),
-      );
-    });
-    return () => {
-      unsubscribe();
-      controllers.forEach((controller) => controller.abort());
-      controllers.clear();
-    };
-  }, []);
+    const existing = new Set(
+      knownThreadIds ? knownThreadIds.split("\u0000") : [],
+    );
 
+    for (const [id, controller] of requests.current) {
+      if (!existing.has(id)) {
+        controller.abort();
+        requests.current.delete(id);
+        notifyActive(id, false);
+      }
+    }
+    const keepExisting = <T,>(previous: Record<string, T>) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(([id]) => existing.has(id)),
+      );
+
+    setInputs(keepExisting);
+    setPending(keepExisting);
+    setNotices(keepExisting);
+  }, [knownThreadIds]);
+
+  // Account changes unmount this pane, cancelling every request before cache disposal.
+  useEffect(
+    () => () => {
+      requests.current.forEach((controller, id) => {
+        controller.abort();
+        notifyActive(id, false);
+      });
+
+      requests.current.clear();
+    },
+    [],
+  );
+
+  // Append a selected preset to the current thread's draft without overwriting typed text.
   const appendPreset = useEffectEvent(() => {
     if (!threadId || !presetAppend) return;
-    setInputs((prev) => ({
-      ...prev,
-      // If user text exists, preserve it then add space before appending.
-      [threadId]: `${prev[threadId] || ""}${prev[threadId] ? " " : ""}${presetAppend}`,
+    setInputs((previous) => ({
+      ...previous,
+      [threadId]: `${previous[threadId] || ""}${
+        previous[threadId] ? " " : ""
+      }${presetAppend}`,
     }));
   });
 
@@ -159,250 +332,227 @@ export default function ChatPane({
     appendPreset();
   }, [presetTrigger]);
 
-  const streamingContent = threadId ? pending[threadId]?.content : undefined;
+  const streamingContent = threadId
+    ? pending[threadId]?.assistantContent
+    : undefined;
+
+  // Follow newly loaded or streamed content while keeping the composer fixed.
   useEffect(() => {
-    // Scroll to the bottom
     if (messageContainerRef.current) {
       messageContainerRef.current.scrollTop =
         messageContainerRef.current.scrollHeight;
     }
-  }, [messages, streamingContent]); // Also scroll as a streaming reply grows
+  }, [messages, streamingContent]);
 
-  function addMessage(role: "user" | "assistant", content: string) {
-    if (!threadId) return;
-    const m: Message = {
-      id: crypto.randomUUID(),
-      threadId,
-      role,
-      content,
-      createdAt: Date.now(),
-    };
-    setStore((prev) => {
-      // Final guard against a reply or error arriving after its thread was deleted.
-      if (!prev.threads.some((thread) => thread.id === threadId)) return prev;
-      return { ...prev, messages: [...prev.messages, m] };
-    });
+  async function refreshAfterInterruption(id: string) {
+    await Promise.allSettled([onRefreshMessages(id), onRefreshThreads()]);
   }
 
   async function send() {
     if (
       !threadId ||
       requests.current.has(threadId) ||
-      !getStore().threads.some((thread) => thread.id === threadId)
-    )
+      !threadIds.includes(threadId)
+    ) {
       return;
+    }
     const input = inputs[threadId] || "";
     if (!input.trim()) return;
 
-    // Add the user message to the store
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      threadId,
-      role: "user",
-      content: input,
-      createdAt: Date.now(),
-    };
-
-    const next = setStore((prev) => ({
-      ...prev,
-      messages: [...prev.messages, userMessage],
-    }));
-    const threadMessages = next.messages
-      .filter((message) => message.threadId === threadId)
-      .map(({ role, content }) => ({ role, content }));
+    // Stage the user message and assistant placeholder without touching the persistent cache.
     const controller = new AbortController();
     requests.current.set(threadId, controller);
-    // Aborting is best effort: ignore late results even if the response already arrived.
-    const cancelled = () =>
-      controller.signal.aborted ||
-      !getStore().threads.some((thread) => thread.id === threadId);
+    onActiveChange(threadId, true);
+    setInputs((previous) => ({ ...previous, [threadId]: "" }));
+    setNotices((previous) => {
+      const next = { ...previous };
+      delete next[threadId];
 
-    // Clear the input box for this thread
-    setInputs((prev) => ({ ...prev, [threadId]: "" }));
+      return next;
+    });
 
-    const clearPending = () => {
-      requests.current.delete(threadId);
-      setPending((prev) => {
-        const next = { ...prev };
-        delete next[threadId];
-        return next;
-      });
-    };
-
-    setPending((prev) => ({
-      ...prev,
-      [threadId]: { content: "", status: "waiting" },
+    setPending((previous) => ({
+      ...previous,
+      [threadId]: {
+        userContent: input,
+        assistantContent: "",
+        status: "waiting",
+      },
     }));
 
-    let idToken: string | undefined;
-    // Try-catch session lookup failure.
     try {
-      // Cognito: get ID token.
-      const session = await fetchAuthSession();
-      idToken = session.tokens?.idToken?.toString();
-    } catch {
-      if (cancelled()) return;
-      clearPending();
-      addMessage(
-        "assistant",
-        "⚠️ Error: Could not verify your login session. Please log in again and retry.",
-      );
-      return;
-    }
-
-    // Deletion or unmount may have happened while session lookup was pending.
-    if (cancelled()) return;
-    if (!idToken) {
-      // i.e. user is not logged in
-      clearPending();
-      addMessage(
-        "assistant",
-        "⚠️ Error: Please log in before sending a message.",
-      );
-      return;
-    }
-
-    // Request to the backend
-    let response: Response;
-    try {
-      // fetch() from the backend
-      response = await fetch(`${import.meta.env.VITE_API_URL}`, {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "text/event-stream",
-          Authorization: `Bearer ${idToken}`, // Cognito Auth
-          // Insert key if in local debug mode
-          ...(import.meta.env.DEV && import.meta.env.VITE_API_KEY
-            ? { "X-Api-Key": import.meta.env.VITE_API_KEY }
-            : {}),
-        },
-        body: JSON.stringify({ threadId, messages: threadMessages }),
-      });
-    } catch (err) {
-      if (cancelled()) return;
-      const error = err as Error;
-      clearPending();
-      addMessage(
-        "assistant",
-        `⚠️ Error: Could not reach backend. ${error.message}`,
-      );
-      return; // Exit early if the fetch fails
-    }
-
-    if (cancelled()) return;
-    if (!response.ok) {
-      clearPending();
-      if (response.status === 504) {
-        addMessage("assistant", `⚠️ Error: Backend timed out (504).`);
-        return;
+      // Start the authenticated chat stream using only the new prompt and thread ID.
+      const response = await sendChat(threadId, input, controller.signal);
+      if (!response.ok) {
+        throw new Error(`Backend request failed (${response.status}).`);
       }
-      addMessage(
-        "assistant",
-        `⚠️ Error: Backend error: ${response.status} ${response.statusText}`,
-      );
-      return;
-    }
-    if (!response.body) {
-      clearPending();
-      addMessage("assistant", "⚠️ Error: Backend response has no body.");
-      return;
-    }
+      if (!response.body) throw new Error("Backend response has no body.");
 
-    // Stream the reply in as it arrives. Only commit it to the store once finished.
-    let finalContent = "";
-    let terminated = false; // true once a "done" or "error" event is seen
-    try {
-      for await (const { event, data } of readSseEvents(response.body)) {
-        if (cancelled()) return;
-        if (event === "delta") {
-          finalContent += data.content ?? "";
-          setPending((prev) => ({
-            ...prev,
-            [threadId]: { content: finalContent, status: "streaming" },
+      // Accumulate deltas only in temporary display state until the backend acknowledges persistence.
+      let assistantContent = "";
+      let completed = false;
+      for await (const event of readSseEvents(response.body)) {
+        if (controller.signal.aborted) return;
+        if (event.event === "delta") {
+          assistantContent += String(event.data.content ?? "");
+          setPending((previous) => ({
+            ...previous,
+            [threadId]: {
+              userContent: input,
+              assistantContent,
+              status: "streaming",
+            },
           }));
-        } else if (event === "done") {
-          terminated = true;
-        } else if (event === "error") {
-          finalContent += `${finalContent ? "\n\n" : ""}⚠️ Error: ${data.message}`;
-          terminated = true;
+        } else if (event.event === "done") {
+          completed = true;
+        } else if (event.event === "error") {
+          throw new Error(String(event.data.message ?? "The response failed."));
         }
       }
-    } catch (err) {
-      if (cancelled()) return;
-      const error = err as Error;
-      finalContent += `${finalContent ? "\n\n" : ""}⚠️ Error: Lost connection to backend. ${error.message}`;
-    }
 
-    if (cancelled()) return;
-    if (!terminated) {
-      // Connection closed without a clean "done"/"error" - likely a timeout further upstream.
-      finalContent += `${finalContent ? "\n\n" : ""}⚠️ Response interrupted (connection closed before finishing, possibly a timeout).`;
-    }
+      if (!completed) {
+        throw new Error("The connection closed before the response finished.");
+      }
 
-    clearPending();
-    addMessage(
-      "assistant",
-      finalContent || "⚠️ Error: Backend returned an empty response.",
-    );
+      // Replace optimistic content with the exact messages and ordering stored by DynamoDB.
+      const results = await Promise.allSettled([
+        onRefreshMessages(threadId),
+        onRefreshThreads(),
+      ]);
+
+      if (results.some((result) => result.status === "rejected")) {
+        setNotices((previous) => ({
+          ...previous,
+          [threadId]:
+            "The response completed, but the saved conversation could not be refreshed. Try Refresh.",
+        }));
+      }
+    } catch (failure) {
+      if (controller.signal.aborted) return;
+
+      // Report interruption outside chat history, then reconcile whatever the backend did persist.
+      const detail =
+        failure instanceof Error ? failure.message : "Unknown error.";
+
+      setNotices((previous) => ({
+        ...previous,
+        [threadId]: `Response interrupted. ${detail}`,
+      }));
+
+      await refreshAfterInterruption(threadId);
+    } finally {
+      // Clear temporary UI only if this is still the current request for the thread.
+      if (requests.current.get(threadId) === controller) {
+        requests.current.delete(threadId);
+        onActiveChange(threadId, false);
+        setPending((previous) => {
+          const next = { ...previous };
+          delete next[threadId];
+
+          return next;
+        });
+      }
+    }
   }
 
   if (!threadId) return null;
+  const currentPending = pending[threadId];
 
   return (
-    <div
-      className={styles.pane}
-      onFocus={onFocus} // Attach the onFocus handler to the main container
-      tabIndex={-1} // Ensure the div can receive focus
-    >
-      {/* Message Display div */}
+    <div className={styles.pane} onFocus={onFocus} tabIndex={-1}>
+      {notices[threadId] && (
+        <div className={styles.notice} role="alert">
+          <span>{notices[threadId]}</span>
+          <button
+            type="button"
+            className={`${controls.button} ${styles.noticeAction}`}
+            onClick={() => {
+              void onRefreshMessages(threadId)
+                .then(() => {
+                  setNotices((previous) => {
+                    const next = { ...previous };
+                    delete next[threadId];
+
+                    return next;
+                  });
+                })
+                .catch((failure) => {
+                  onError(failure, "Could not refresh the conversation.");
+                });
+            }}
+          >
+            Refresh
+          </button>
+        </div>
+      )}
+
       <div ref={messageContainerRef} className={styles.messages} tabIndex={-1}>
         <div className={styles.contentColumn}>
-          {messages.map((m) =>
-            m.role === "user" ? (
-              <div
-                key={m.id}
-                className={styles.userMessage}
-                data-message-role="user"
-              >
-                {m.content}
-              </div>
-            ) : (
-              <AssistantMessage key={m.id} content={m.content} />
-            ),
+          {isLoadingMessages && messages === undefined && (
+            <p className={styles.loading}>Loading messages…</p>
           )}
-          {pending[threadId] &&
-            (pending[threadId].content ? (
-              <div className={styles.assistantMessage}>
-                <RenderedMarkdown content={pending[threadId].content} />
+          {(messages ?? []).map((message) => (
+            <MessageBubble
+              key={message.messageId}
+              message={message}
+              disabled={Boolean(currentPending)}
+              onEdit={(content) =>
+                onEditMessage(threadId, message.messageId, content)
+              }
+              onDelete={() => onDeleteMessage(threadId, message.messageId)}
+            />
+          ))}
+          {currentPending && (
+            <div
+              className={`${styles.messageBlock} ${styles.userMessageBlock}`}
+              data-message-role="user"
+            >
+              <div
+                className={`${styles.userMessage} ${styles.pendingMessage}`}
+                data-message-bubble="user"
+              >
+                <div className={styles.messageText}>
+                  {currentPending.userContent}
+                </div>
+              </div>
+            </div>
+          )}
+          {currentPending &&
+            (currentPending.assistantContent ? (
+              <div
+                className={`${styles.assistantMessageBlock} ${styles.assistantMessage}`}
+              >
+                <RenderedMarkdown content={currentPending.assistantContent} />
               </div>
             ) : (
               <TypingIndicator />
             ))}
         </div>
       </div>
+
       <div className={styles.composer}>
         <div className={styles.composerInner}>
           <textarea
             className={`${controls.field} ${styles.composerInput}`}
             value={inputs[threadId] || ""}
-            onChange={(e) =>
-              setInputs((prev) => ({ ...prev, [threadId]: e.target.value }))
+            onChange={(event) =>
+              setInputs((previous) => ({
+                ...previous,
+                [threadId]: event.target.value,
+              }))
             }
             placeholder="Type a message..."
           />
           <button
             type="button"
             className={`${controls.button} ${controls.primary} ${styles.sendButton}`}
-            onClick={send}
+            onClick={() => void send()}
             disabled={
-              !!pending[threadId] ||
+              Boolean(currentPending) ||
               (inputs[threadId]?.trim().length || 0) === 0
             }
             aria-label="Send message"
           >
-            {/*▶*/}
             <svg width="22" height="22" viewBox="0 0 16 13" fill="currentColor">
               <path d="M4 2l10 6-10 6V2z" />
             </svg>
