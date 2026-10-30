@@ -22,14 +22,15 @@
 }
 
 .userMessageBlock {
-  width: fit-content;
-  max-width: min(75%, 46rem);
+  width: min(75%, 46rem);
   margin-inline-start: auto;
   margin-block-end: var(--space-3);
 }
 
 .userMessage {
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline-start: auto;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-lg);
   background: var(--color-bubble-user-bg);
@@ -175,6 +176,10 @@
   resize: none;
 }
 
+.composerInput:focus-visible {
+  outline: none;
+}
+
 .sendButton {
   align-self: flex-start;
   padding: var(--space-3) var(--space-4);
@@ -202,7 +207,7 @@
   }
 
   .userMessageBlock {
-    max-width: 85%;
+    width: 85%;
   }
 }
 
